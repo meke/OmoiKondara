@@ -1,0 +1,140 @@
+#! /usr/bin/env ruby
+
+require 'narray'
+
+load '../tools/v2/updatespecdb'
+
+class NArray
+  def count(v)
+    c = 0
+    each {|vv| c += 1 if vv == v}
+    c
+  end # def count(v)
+end # class NArray
+
+class DepGraph
+
+  attr_reader :db
+  attr_reader :adjacency
+  attr_reader :incidence
+  attr_reader :ndeps
+
+  def index(name)
+    @db.names.index(name)
+  end # def index(name)
+
+  def count(name)
+    @counts[index(name)] || 0
+  end # def dependency_count(name)
+
+  def initialize(verbose=false)
+    @db = SpecDB.new(verbose)
+
+    @adjacency = NMatrix.int(@db.names.length, @db.names.length)
+    @db.names.each_with_index do |name, i|
+      specdat = @db.specs[name]
+      next  if specdat.buildRequires.nil?
+      specdat.buildRequires.each do |req|
+        candidate_packages = @db.packages[req.name]
+        if candidate_packages.nil? then
+          raise "\n#{name}/#{name}.spec: required package not found: #{req.name}"
+        end
+
+        packages = []
+        f = false
+        candidate_packages.each do |pkgdat|
+          ff = false
+          case req.rel
+          when '<='
+            ff = (pkgdat.version <= req.version)
+          when '<'
+            ff = (pkgdat.version < req.version)
+          when '>='
+            ff = (pkgdat.version >= req.version)
+          when '>'
+            ff = (pkgdat.version > req.version)
+          when '=='
+            ff = (pkgdat.version == req.version) ||
+              (pkgdat.version.v == req.version.v)
+          else
+            ff = true
+          end
+          packages.push(pkgdat) if ff
+          f ||= ff
+        end # candidate_packages.each do |pkgdat|
+        if !f then
+          nvr = req.name
+          if req.version then
+            nvr += " #{req.rel} "
+            nvr += "#{req.version.e}:" if req.version.e
+            nvr += req.version.to_s
+          end
+          raise "\n#{name}/#{name}.spec: unresolved dependency: #{nvr}"
+        end
+
+        packages.each do |pkgdat|
+          j = @db.names.index(pkgdat.spec)
+          @adjacency[i, j] = 1
+        end
+      end # specdat.buildRequires.each do |req|
+      if verbose then
+        STDERR.print "\rgenerating adjacency matrix: #{100*i/@db.names.length}%"
+        STDERR.flush
+      end
+    end # $spec_name.each do |name|
+    STDERR.puts "\rgenerating adjacency matrix: 100%" if verbose
+
+    @ndeps = @adjacency.sum
+    STDERR.puts "number of dependencies: #{@ndeps}" if verbose
+
+    @incidence = NMatrix.int(@ndeps, @db.names.length)
+    @counts = []
+    k = 0
+    0.upto(@db.names.length-1) do |i|
+      0.upto(@db.names.length-1) do |j|
+        next  if @adjacency[j, i].zero?
+        @incidence[k, i] = 1
+        @incidence[k, j] = -1
+        @counts[j] ||= 0
+        @counts[j] += 1
+        k += 1
+      end
+      if verbose then
+        STDERR.print "\rgenerating incidence matrix: #{100*i/@db.names.length}%"
+        STDERR.flush
+      end
+    end
+    STDERR.puts "\rgenerating incidence matrix: 100%" if verbose
+
+    @db.freeze
+    @adjacency.freeze
+    @incidence.freeze
+    @counts.freeze
+  end # def generate_matrix(verbose=false)
+end # class DepGraph
+
+if __FILE__ == $0 then
+  depgrp = DepGraph.new(true)
+
+  sorted_spec_name = depgrp.db.names.sort do |a, b|
+    rv = (depgrp.count(b) <=> depgrp.count(a))
+    rv = (a <=> b) if rv.zero?
+    rv
+  end
+
+  sorted_spec_name.each do |name|
+    STDOUT.puts "#{name}:"
+    i = depgrp.index(name)
+    0.upto(depgrp.ndeps-1) do |j|
+      next  if depgrp.incidence[j, i] != -1
+      idx = depgrp.incidence[j, true].to_a.flatten.index(1)
+      STDOUT.puts "\t#{depgrp.db.names[idx]}" if idx  # measure for rpm
+    end
+    STDOUT.print "\n"
+  end # sorted_spec_name.reverse.each do |name|
+end # if __FILE__ == $0 then
+
+### Local Variables:
+### mode: ruby
+### indent-tabs-mode: nil
+### End Variables:

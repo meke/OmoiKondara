@@ -1,0 +1,140 @@
+#
+#
+# get_no          NoSource/NoPatchタグで指定されたファイルを 
+#                 SOURCES 以下に用意する
+#
+# cp_to_tree      Sourece/Patch/Icon タグで指定されているファイルを
+#                 SOURCES 以下に用意する
+
+
+=begin
+--- get_no(source_or_patch)
+NoSource/NoPatch タグで指定されているソース/パッチを
+SOURCES ディレクトリに用意する。ローカルに既に存在す
+る場合はそれを使用し、無い場合のみ記述されている URL
+から取得する。どちらにも無い場合はミラーサイトから取
+得する。
+=end
+def get_no(type)
+  unless $hTAG.key?("NO#{type}")
+    return true
+  end
+  nosrc = $hTAG["NO#{type}"].split(/[\s,]/)
+  nosrc.delete ""
+  status = 0
+  nosrc.each do |no|
+    file = $hTAG["#{type}#{no}"]
+    file = $hTAG["#{type}"] if no == "0" and file.nil?
+    if file =~ /^(ftp|https?):\/\// then
+      n = file.split(/\//)[-1]
+      if !cp_local(n) then
+        Dir.chdir "#{$hTAG['NAME']}/SOURCES"
+        status = -1
+        if $MIRROR_FIRST then
+          status = get_from_mirror n
+        end
+        if status.nonzero? then
+          status = 0
+          re = nil
+          $URL_ALIAS.each_key do |key|
+            if key.match(file) then
+              re = key
+              break
+            end
+          end
+          file.sub!(re, $URL_ALIAS[re]) if re
+          status = exec_command("#{$FTP_CMD} '#{file}'")
+          if status.nonzero? and !$MIRROR_FIRST
+            # file retrieve error
+            status = get_from_mirror(n)
+          end
+        end
+        Dir.chdir "../.."
+      end
+    else
+      if !cp_local(file) then
+        Dir.chdir "#{$hTAG['NAME']}/SOURCES"
+        status = get_from_mirror file
+        Dir.chdir "../.."
+      end
+    end
+    return false if status.nonzero?
+  end
+  return status.zero?
+end
+
+=begin
+--- cp_to_tree
+Sourece/Patch/Icon タグで指定されているファイルをビルド
+ツリーにコピーする。すでに存在する際には co されている
+物と比較し違う物の場合はコピーする
+=end
+def cp_to_tree
+  Dir.chdir $hTAG['NAME']
+  $hTAG.each do |t, v|
+    if t =~ /^(SOURCE|PATCH|ICON)\d*/ then
+      v = v.split(/\//)[-1] if v =~ /\//
+      if !File.exist?("SOURCES/#{v}") then
+        ret = exec_command "cp -pfv #{v} SOURCES"
+        throw(:exit_buildme, MOMO_FAILURE) if ret != 0
+      else
+        if File.exist?(v) then
+          md5SRC = `md5sum #{v}`.split[0]
+          md5DEST = `md5sum SOURCES/#{v}`.split[0]
+          exec_command "cp -pfv #{v} SOURCES" if md5SRC != md5DEST
+        end
+      end
+    end
+  end
+  Dir.chdir ".."
+end
+
+# ----------- 以下サブルーチン
+
+
+=begin
+--- get_from_mirror(filename)
+引数で指定されたファイルをミラーサイトから取得する。
+.OmoiKondara に MIRROR で記述されている URL に SOURCES/
+を加えた場所から取得する
+=end
+def get_from_mirror(n)
+  $MIRROR.each do |m|
+    return 0 if exec_command("#{$FTP_CMD} '#{m}/SOURCES/#{n}'").zero?
+  end
+  return -1
+end
+
+def ftpsearch(file)
+  searchstr = "http://ftpsearch.lycos.com/swadv/AdvResults.asp?form=advanced&query=#{file}&doit=Search&hits=20"
+  searchstr += "&limdom=#{DOMAIN}" if DOMAIN != ""
+  candidate = []
+  i = RETRY_FTPSEARCH
+  while candidate == [] && (i -= 1) > 0
+    result = `w3m -dump "#{searchstr}"`
+    strip_result = result.scan(/\d+\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+(\S+)\s+(\S+)/)
+    candidate = strip_result.delete_if do |site, path|
+      path !~ /#{file}/
+    end
+  end
+  candidate.each do |site, path|
+    url = "ftp://#{site}#{path}"
+    return 0 if exec_command("#{$FTP_CMD} '#{url}'").zero?
+  end
+  return -1
+end
+
+def cp_local(n)
+  topdir = get_topdir
+  if File.exist?("#{topdir}/SOURCES/#{n}") then
+    if File.exist?("#{$hTAG['NAME']}/SOURCES/#{n}") then
+      md5SRC = `md5sum #{topdir}/SOURCES/#{n}`.split[0]
+      md5DEST = `md5sum #{$hTAG['NAME']}/SOURCES/#{n}`.split[0]
+      return true if md5SRC == md5DEST
+    end
+    exec_command "cp -pfv #{topdir}/SOURCES/#{n} #{$hTAG['NAME']}/SOURCES"
+    return true
+  end
+  exec_command("echo #{topdir}/SOURCES/#{n} is missing")
+  return false
+end

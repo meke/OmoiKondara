@@ -1,0 +1,191 @@
+#! /usr/bin/env ruby
+
+require 'pstore'
+require 'rpm'
+
+module RPM
+  class Dependency
+    def to_struct
+      relation = if le? then
+                   '<='
+                 elsif lt? then
+                   '<'
+                 elsif ge? then
+                   '>='
+                 elsif gt? then
+                   '>'
+                 elsif eq? then
+                   '=='
+                 else
+                   nil
+                 end
+      SpecDB::DependencyData.new(name, relation ? version : nil, relation)
+    end # to_struct
+  end # class Dependency
+end # module RPM
+
+class SpecDB
+
+  PackageData    = Struct.new(:name, :version, :group, :provides, :requires, :spec)
+  SpecData       = Struct.new(:name, :sources, :packages, :archs,
+                              :buildRequires, :mtime, :lastbuild)
+  DependencyData = Struct.new(:name, :version, :rel)
+
+  class DependencyData
+    def to_s
+      str = name
+      if rel then
+        str += " #{rel} "
+        str += "#{version.e}:" if version.e
+        str += "#{version}"
+      end
+      str
+    end # def to_s
+  end
+
+  FILENAME = ".specdb"
+
+  attr_reader :names
+  attr_reader :specs
+  attr_reader :packages
+
+  def commit!
+    print 'saving .specdb ... '
+    STDOUT.flush
+    begin
+      db = PStore.new(FILENAME)
+      db.transaction do |db|
+        db[:spec_data] = @specs
+        db.commit
+      end
+    end
+    puts 'done'
+  end # def commit!
+
+  def initialize(verbose=false)
+    RPM.verbosity = RPM::MESS_VERBOSE
+
+    @names = (Dir.glob('./*').select do |dir|
+                name = File.basename(dir)
+                File.exist?("#{dir}/#{name}.spec") and
+                  !File.exist?("#{dir}/OBSOLETE") and
+                  !File.exist?("#{dir}/.SKIP") and
+                  !File.exist?("#{dir}/SKIP")
+              end).collect {|dir| File.basename(dir)}.sort.freeze
+
+    if verbose then
+      STDERR.puts "number of specfiles: #{@names.length}"
+    end
+
+    @specs = {}
+    if File.exist?(FILENAME) then
+      dbmtime = File.mtime(FILENAME)
+      db = PStore.new(FILENAME)
+      begin
+        db.transaction {|db| @specs = db[:spec_data]}
+      rescue TypeError => e
+        STDERR.print "specdb load error"
+        File.unlink(FILENAME)
+        File.unlink("#{FILENAME}~")
+      end
+    end
+
+    @specs.each_key do |name|
+      if !File.exist?("#{name}/#{name}.spec") or
+          File.exist?("#{name}/OBSOLETE") or
+          File.exist?("#{name}/.SKIP") or
+          File.exist?("#{name}/SKIP") then
+        @specs.delete(name)
+      end
+    end
+
+    updated = false
+    @names.each_with_index do |name, i|
+      mtime = File.mtime("#{name}/#{name}.spec")
+      if @specs.has_key?(name) and File.exist?(FILENAME) and
+          @specs[name].mtime.to_i >= mtime.to_i
+        next
+      end
+
+      RPM.readrc('rpmrc')
+      spec = RPM::Spec.open("#{name}/#{name}.spec")
+      if spec.nil? then
+        STDERR.puts "\n#{name}/#{name}.spec: error occurred."
+        exit 1
+      end
+
+      packages = []
+      spec.packages.each do |pkg|
+        provides = pkg.provides.
+          collect{|prov| prov.to_struct}
+        requires = pkg.requires.
+          collect{|req|  req.to_struct}
+        packages.push(PackageData.new(pkg.name,
+                                      pkg.version,
+                                      pkg[RPM::TAG_GROUP],
+                                      provides,
+                                      requires,
+                                      name))
+      end
+
+      brs = if spec.buildrequires then
+              spec.buildrequires.
+                collect{|req| req.to_struct}
+            else
+              nil
+            end
+      lastbuild = if @specs.has_key?(name) then
+                    @specs[name].lastbuild
+                  else
+                    nil
+                  end
+      updated = true
+      @specs[name] = SpecData.new(name, spec.sources, packages,
+                                  spec.buildarchs, brs, mtime, lastbuild)
+
+      if verbose then
+        STDERR.puts name
+        STDERR.print "\rscanning specfile: #{100*i/@names.length}%"
+        STDERR.flush
+      end
+    end # @names.each_with_index do |name, i|
+    STDERR.puts "\rscanning specfile: 100%" if verbose
+
+    commit! if updated
+
+    @packages = {}
+    class << @packages
+      alias_method :__aset, '[]='
+
+      def []=(name, val)
+        ary = self[name] || []
+        ary.push(val)
+        __aset(name, ary)
+      end # def []=(name, val)
+    end # class << @packages
+
+    @names.each do |name|
+      if not @specs[name]
+        puts "Error: specdata for package = #{name} is nil"
+        puts "try touch #{name}/#{name}.spec"
+        exit(1)
+      end
+      @specs[name].packages.each do |pkgdat|
+        @packages[pkgdat.name] = pkgdat
+        pkgdat.provides.each {|prov| @packages[prov.name] = pkgdat}
+      end
+    end
+  ensure
+    RPM.verbosity = RPM::LOG_EMERG
+  end # def initialize
+
+end # class SpecDB
+
+if __FILE__ == $0 then
+  SpecDB.new(true)
+end
+
+### Local Variables:
+### mode: ruby
+### indent-tabs-mode: nil
+### End Variables:

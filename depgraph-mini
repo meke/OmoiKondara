@@ -1,0 +1,13 @@
+#! /usr/bin/env ruby
+# depgraph-mini - SpecDB stub
+# OmoiKondara not uses DepGraph methods except db. orz
+
+load '../tools/v2/updatespecdb'
+
+class DepGraph
+  attr_reader :db
+  def initialize(verbose=false)
+    @db = SpecDB.new(verbose)
+    @db.freeze
+  end
+end

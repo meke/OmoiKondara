@@ -1,0 +1,61 @@
+#!/usr/bin/env ruby
+# -*- ruby-mode -*-
+# $Id: OmoiKondara 11691 2006-10-12 14:28:36Z ryu $
+
+$:.unshift(File.dirname($0))
+require 'environment'
+require 'getoptlong'
+require 'timeout'
+
+require 'utils'
+require 'config'
+require 'build'
+
+if not $NOSTRICT then
+  print "reading RPM database to see what is installed ..."
+  STDOUT.flush
+  begin
+    rpmdb = RPM::DB.open
+    rpmdb.each do |pkg|
+      pkg.provides.each do |a|
+        next if (a.flags & RPM::SENSE_RPMLIB).nonzero?
+        $SYSTEM_PROVIDES.push(a.to_struct)
+      end
+    end # rpmdb.each do |pkg|
+  ensure
+    rpmdb = nil
+    GC.start
+  end
+  puts " OK\n"
+end # if not $NOSTRICT then
+
+if ARGV.length == 0 then
+  if $DEPEND_PACKAGE == "" then
+    recursive_build "./"
+  else
+    $FORCE = true
+    dep = `env LANG=C sudo rpm -e --test #{$DEPEND_PACKAGE} 2>&1`
+    pkgs = dep.scan(/^.*needed by (?:\(installed\) )(.*)$/).flatten.sort.uniq.compact
+    sp = Array.new
+    pkgs.each do |pkg|
+      if pkg !~ /^$/ then
+        sp += [`rpm -q --queryformat "%{SOURCERPM}" #{pkg}`.split(/\-/)[0..-3].join('-')]
+      end
+    end
+    buildme $DEPEND_PACKAGE
+    spkgs = sp.sort.uniq
+    spkgs.each {|pkg| buildme pkg}
+  end
+else
+  ARGV.each do |av|
+    av = av.chop if av =~ /^.+\/$/
+    buildme(av)
+  end
+end
+
+$DEPGRAPH.db.commit! if $DEPGRAPH
+
+### Local Variables:
+### mode: ruby
+### indent-tabs-mode: nil
+### End:
