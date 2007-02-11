@@ -15,7 +15,7 @@ def chk_requires(hTAG, name_stack)
     hTAG["BUILDREQUIRES"].split(/[\s,]/).each {|r| req.push r}
   end
 
-  return  if req.empty?
+  return  MOMO_SUCCESS if req.empty?
 
   req.delete ""
   while r = req.shift do
@@ -104,6 +104,7 @@ def chk_requires(hTAG, name_stack)
       end
     end
   end
+  return MOMO_SUCCESS
 end
 
 =begin
@@ -119,7 +120,7 @@ spec ファイルのデータベースを参照する。
 def chk_requires_strict(hTAG, name_stack)
   name = hTAG['NAME']
   brs = $DEPGRAPH.db.specs[name].buildRequires
-  return  if brs.nil?
+  return MOMO_SUCCESS if brs.nil?
   brs.each do |req|
     puts "#{name} needs #{req} installed to build:" if $VERBOSEOUT
 
@@ -154,6 +155,7 @@ def chk_requires_strict(hTAG, name_stack)
       end
     end
   end # brs.each do |req|
+  return MOMO_SUCCESS
 end # def chk_requires_strict
 
 
@@ -212,15 +214,11 @@ def build_and_install(pkg, rpmflg, name_stack, specname=nil)
   if !$NONFREE && File.exist?("#{specname||pkg}/TO.Nonfree")
     return
   end
-  _t = hTAG.dup
-  _l = $LOG_PATH
   
   if buildme(specname||pkg, name_stack) == MOMO_LOOP then
     return MOMO_LOOP
   end
   topdir = get_topdir
-  $LOG_PATH = _l
-  hTAG = _t
   
   pkgs = []
   if specname and $DEPGRAPH then

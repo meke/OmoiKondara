@@ -37,15 +37,21 @@ def momo_assert
   raise "Assertion failed !" unless yield
 end
 
+def momo_debug_log(msg)
+  STDERR.puts msg
+end
+
 =begin
 ---  exec_command(command, timeout = false)
 引数で指定されたコマンドを実行し、出力をログに記録する。timeoutがtrue の
 場合には、タイムアウトするgets (gets_with_timeout) を使って、標準出力 を
 閉じずに終わってしまう子プロセスがdefunctになるのを防ぐ。
 =end
-def exec_command(cmd, timeout = false)
+def exec_command(cmd, log_file, timeout = false)
+  momo_assert{ nil != log_file }
+
   status = nil
-  open("#{$LOG_PATH}/#{$LOG_FILE}", "a") do |fLOG|
+  open("#{log_file}", "a") do |fLOG|
     fLOG.sync = true
     if !$SCRIPT then
       fLOG.print "\n--[#{GREEN}#{cmd}#{NOCOLOR}]--\n"
@@ -145,12 +151,4 @@ def prepare_dirs(hTAG, directories)
   Dir.chdir ".."
 end
 
-def prepare_outputdirs
-  topdir = get_topdir ".."
-  ["SOURCES", "SRPMS", "#{$ARCHITECTURE}", "noarch"].each do |subdir|
-    if !File.directory?("#{topdir}/#{subdir}") then
-      exec_command "mkdir -p #{topdir}/#{subdir}"
-    end
-  end
-end
 

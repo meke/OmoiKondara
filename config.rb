@@ -11,6 +11,7 @@ MOMO_OBSOLETE =  3  #  OBSOLETE
 MOMO_LOOP     =  4  #  依存関係にループがあったため失敗
 
 
+MOMO_NO_SUCH_PACKAGE = 10  # パッケージが存在しない
 
 # configration系
 #
@@ -138,7 +139,6 @@ end
   $DEF_RPMOPT         = "-ba"
   $FORCE              = false
   $CVS                = false
-  $SRPM_ONLY          = false
   $VERBOSEOUT         = false
   $DEBUG_FLAG         = false
   $NONFREE            = false
@@ -155,7 +155,6 @@ end
   $IGNORE_REMOVE      = false
   $FTP_CMD            = ""
   $DISPLAY            = ":0.0"
-  $LOG_PATH           = ""
   $LOG_FILE           = "OmoiKondara.log"
   $LOG_FILE_COMPRESS  = true
   $DEPEND_PACKAGE     = ""

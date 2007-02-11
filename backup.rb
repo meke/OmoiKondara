@@ -1,16 +1,18 @@
 # --  backup系 --------------------------------------------------------------
 
-def backup_logfile(pkg)
-  return  unless File.exist?("#{pkg}/#{$LOG_FILE}")
-  mtime = File.mtime("#{pkg}/#{$LOG_FILE}")
+def backup_logfile(log_file)
+  return  unless File.exist?("#{log_file}")
+  mtime = File.mtime("#{log_file}")
   suffix = mtime.strftime('%Y%m%d%H%M%S')
-  File.rename("#{pkg}/#{$LOG_FILE}", "#{pkg}/#{$LOG_FILE}.#{suffix}")
-  `bzip2 -f -9 '#{pkg}/#{$LOG_FILE}.#{suffix}'` if $LOG_FILE_COMPRESS
-end # def backup_logfile(pkg)
+  File.rename("#{log_file}", "#{log_file}.#{suffix}")
+  `bzip2 -f -9 '#{log_file}.#{suffix}'` if $LOG_FILE_COMPRESS
+end # def backup_logfile(log_file)
 
-def backup_nosources(hTAG)
-  topdir = get_topdir ".."
-  if (hTAG["NOSOURCE"] != nil && !$SRPM_ONLY) then
+def backup_nosources(hTAG, srpm_only, log_file)
+  momo_debug_log("backup_nosources #{hTAG['NAME']}")
+
+  topdir = get_topdir(hTAG, "..")
+  if (hTAG["NOSOURCE"] != nil && !srpm_only) then
     hTAG["NOSOURCE"].split(/[\s,]/).each do |n|
       if n != "" then
         if n == "0" && ! hTAG.key?("SOURCE0")
@@ -19,12 +21,12 @@ def backup_nosources(hTAG)
           s = hTAG["SOURCE#{n}"]
         end
         s = s.split(/\//)[-1] if s =~ /^(ftp|https?):\/\//
-        exec_command "cp -pfv SOURCES/#{s} #{topdir}/SOURCES"
+        exec_command("cp -pfv SOURCES/#{s} #{topdir}/SOURCES", log_file)
         File.chmod 0644, "#{topdir}/SOURCES/#{s}"
       end
     end
   end
-  if (hTAG.key?("NOPATCH") && !$SRPM_ONLY) then
+  if (hTAG.key?("NOPATCH") && !srpm_only) then
     hTAG["NOPATCH"].split(/[\s,]/).each do |n|
       if n != "" then
         if n == "0" && ! hTAG.key?("PATCH0") then
@@ -33,7 +35,7 @@ def backup_nosources(hTAG)
           s = hTAG["PATCH#{n}"]
         end
         s = s.split(/\//)[-1] if s =~ /^(ftp|https?):\/\//
-        exec_command "cp -pfv SOURCES/#{s} #{topdir}/SOURCES"
+        exec_command("cp -pfv SOURCES/#{s} #{topdir}/SOURCES", log_file)
         File.chmod 0644, "#{topdir}/SOURCES/#{s}"
       end
     end
@@ -41,20 +43,20 @@ def backup_nosources(hTAG)
 end
 
 =begin
---- backup_rpms(install, specname)
+--- backup_rpms(hTAG, install, log_file)
 ビルドされたRPMファイルの古いバージョンのものをtopdir以下の各ディレクト
 リから消去し、新しいものをtopdirの各ディレクトリにコピーする。引数で指定
 されている場合には、新しいパッケージのインストールもする。
 =end
-def backup_rpms(install, specname=nil)
-  topdir = get_topdir ".."
-
+def backup_rpms(hTAG, install, rpmopt, log_file)
+  topdir = get_topdir(hTAG, "..")
+  specname = hTAG['NAME']
   if specname and $DEPGRAPH then
     spec = $DEPGRAPH.db.specs[specname]
     spec.lastbuild = Time.now
   end # if specname and $DEPGRAPH then
 
-  if $RPMOPT =~ /\-ba|\-bs/ then
+  if rpmopt =~ /\-ba|\-bs/ then
     # refresh the SRPM file
     Dir.glob("SRPMS/*.rpm").each do |srpm|
       pkg = srpm.split("/")[-1].split("-")[0..-3].join("-")
@@ -63,11 +65,11 @@ def backup_rpms(install, specname=nil)
           File.delete s
         end
       end
-      exec_command "cp -pfv #{srpm} #{topdir}/SRPMS"
+      exec_command("cp -pfv #{srpm} #{topdir}/SRPMS", log_file)
       File.chmod 0644, "#{topdir}/SRPMS/#{srpm.split('/')[-1]}"
     end
   end
-  if $RPMOPT =~ /\-ba|\-bb/ then
+  if rpmopt =~ /\-ba|\-bb/ then
     installs = ""
     rpms = Dir.glob("RPMS/{#{$ARCHITECTURE},noarch}/*.rpm")
     rpms.each do |rpm|
@@ -103,7 +105,7 @@ def backup_rpms(install, specname=nil)
         end
       end
       current_arch = rpm.split('/')[-2]
-      exec_command "cp -pfv #{rpm} #{topdir}/#{current_arch}"
+      exec_command("cp -pfv #{rpm} #{topdir}/#{current_arch}", log_file)
       File.chmod 0644, "#{topdir}/#{current_arch}/#{rpm.split('/')[-1]}"
       if install then
         installs += "#{rpm} "
@@ -111,11 +113,11 @@ def backup_rpms(install, specname=nil)
           installs += "#{rpm} "
       end
       if $SCANPACKAGES && rpms.last == rpm then
-        exec_command "/usr/sbin/mph-scanpackages #{topdir}/#{$ARCHITECTURE} #{topdir}/noarch"
+        exec_command("/usr/sbin/mph-scanpackages #{topdir}/#{$ARCHITECTURE} #{topdir}/noarch", log_file)
       end
     end
     if installs != ""
-      exec_command "sudo rpm -Uvh --force #{installs} || sudo rpm -Uvh --nodeps --force #{installs}"
+      exec_command("sudo rpm -Uvh --force #{installs} || sudo rpm -Uvh --nodeps --force #{installs}", log_file)
       until $SYSTEM_PROVIDES.empty?
         $SYSTEM_PROVIDES.pop
       end
