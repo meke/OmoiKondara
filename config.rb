@@ -155,7 +155,6 @@ end
   $IGNORE_REMOVE      = false
   $FTP_CMD            = ""
   $DISPLAY            = ":0.0"
-  $hTAG               = Hash.new
   $LOG_PATH           = ""
   $LOG_FILE           = "OmoiKondara.log"
   $LOG_FILE_COMPRESS  = true
@@ -164,7 +163,6 @@ end
   $BUILD_ALTER        = false
   $BUILD_ORPHAN       = false
   $DEPGRAPH           = nil
-  $NAME_STACK         = []
   $RPMVERCMP        = "rpmvercmp"
   $SYSTEM_PROVIDES    = []
   class << $SYSTEM_PROVIDES

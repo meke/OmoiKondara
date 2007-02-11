@@ -13,7 +13,7 @@
 
 処理内容としては，%define および %global 行を切り出し spec 中のマクロを
 置き換えるName TAG や Version TAG など他の TAG で使用される可能性のあ
-る物は置き換えて、Hash $hTAG を生成する。その際に、TAG名 はすべて大文字
+る物は置き換えて、Hash hTAG を生成する。その際に、TAG名 はすべて大文字
 として格納する。
 
 buildmeから呼ばれる
@@ -39,7 +39,7 @@ def strip_spec(spec)
   macro["version"] = macro["PACKAGE_VERSION"] = version
   macro["release"] = macro["PACKAGE_RELEASE"] = release
   
-  $hTAG.clear
+  hTAG = {}
   tag = spec.scan(/^%((?:No)?(?:Source|Patch))\s+(\d+)\s+(\S+)\s+(\S+)/)
   tag.each do |name, no, url, md5|
     no = expand_macros(no, macro)
@@ -51,14 +51,14 @@ def strip_spec(spec)
     when /Patch/
       key = "PATCH#{no}"
     end
-    $hTAG[key] = url
+    hTAG[key] = url
     
     if name =~ /No/ then
       key = name.upcase
-      if $hTAG.key?(key) then
-        $hTAG[key] = "#{$hTAG[key]}, #{no}"
+      if hTAG.key?(key) then
+        hTAG[key] = "#{hTAG[key]}, #{no}"
       else
-        $hTAG[key] = no
+        hTAG[key] = no
       end
     end
   end
@@ -67,12 +67,14 @@ def strip_spec(spec)
     key.upcase!
     value.strip!
     value = expand_macros(value, macro)
-    if $hTAG.key?(key) then
-      $hTAG[key] = "#{$hTAG[key]}, #{value}"
+    if hTAG.key?(key) then
+      hTAG[key] = "#{hTAG[key]}, #{value}"
     else
-      $hTAG[key] = value
+      hTAG[key] = value
     end
   end
+
+  return hTAG
 end
 
 #
@@ -82,31 +84,33 @@ end
 # buildmeから呼ばれる
 #
 def make_hTAG(name)
-  $hTAG.clear
-  $hTAG['NAME'] = $DEPGRAPH.db.specs[name].name
-  $hTAG['VERSION'] = $DEPGRAPH.db.specs[name].packages[0].version.v
-  $hTAG['RELEASE'] = $DEPGRAPH.db.specs[name].packages[0].version.r
-  $hTAG['EPOCH'] = $DEPGRAPH.db.specs[name].packages[0].version.e
-  $hTAG['GROUP'] = $DEPGRAPH.db.specs[name].packages.
+  hTAG = {}
+  hTAG['NAME'] = $DEPGRAPH.db.specs[name].name
+  hTAG['VERSION'] = $DEPGRAPH.db.specs[name].packages[0].version.v
+  hTAG['RELEASE'] = $DEPGRAPH.db.specs[name].packages[0].version.r
+  hTAG['EPOCH'] = $DEPGRAPH.db.specs[name].packages[0].version.e
+  hTAG['GROUP'] = $DEPGRAPH.db.specs[name].packages.
     collect {|pkgdat| pkgdat.group}.join(', ')
   nosource = []
   nopatch = []
   $DEPGRAPH.db.specs[name].sources.each do |src|
     case src
     when RPM::Patch
-      $hTAG["PATCH#{src.num}"] = src.fullname
+      hTAG["PATCH#{src.num}"] = src.fullname
       nopatch << src.num if src.no?
     when RPM::Icon
-      $hTAG["ICON#{src.num}"] = src.fullname
+      hTAG["ICON#{src.num}"] = src.fullname
       nopatch << src.num if src.no?
     else
-      $hTAG["SOURCE#{src.num}"] = src.fullname
+      hTAG["SOURCE#{src.num}"] = src.fullname
       nosource << src.num if src.no?
     end
   end
-  $hTAG['NOSOURCE'] = nosource.join(', ')
-  $hTAG['NOPATCH'] = nopatch.join(', ')
-  $hTAG['BUILDARCH'] = $DEPGRAPH.db.specs[name].archs.join(', ')
+  hTAG['NOSOURCE'] = nosource.join(', ')
+  hTAG['NOPATCH'] = nopatch.join(', ')
+  hTAG['BUILDARCH'] = $DEPGRAPH.db.specs[name].archs.join(', ')
+
+  return hTAG
 end # def make_hTAG(name)
 
 

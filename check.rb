@@ -6,13 +6,13 @@ TAG BuildPreReq, BuildRequires 行に記述されているパッ
 rpm -ivh する関係上、sudo が password 無しで実行可能
 である事。
 =end
-def chk_requires
+def chk_requires(hTAG, name_stack)
   req = Array.new
-  if $hTAG.key?("BUILDPREREQ") then
-    req = $hTAG["BUILDPREREQ"].split(/[\s,]/)
+  if hTAG.key?("BUILDPREREQ") then
+    req = hTAG["BUILDPREREQ"].split(/[\s,]/)
   end
-  if $hTAG.key?("BUILDREQUIRES") then
-    $hTAG["BUILDREQUIRES"].split(/[\s,]/).each {|r| req.push r}
+  if hTAG.key?("BUILDREQUIRES") then
+    hTAG["BUILDREQUIRES"].split(/[\s,]/).each {|r| req.push r}
   end
 
   return  if req.empty?
@@ -28,7 +28,7 @@ def chk_requires
     r = r.split(/\-/)[0..-2].join("-") if r =~ /\-devel/
 
     if ir.length != 2 then
-      if build_and_install(r, "-Uvh") == MOMO_LOOP then
+      if build_and_install(r, "-Uvh", name_stack) == MOMO_LOOP then
         return MOMO_LOOP
       end
       # バージョン情報をスキップする
@@ -74,7 +74,7 @@ def chk_requires
         when ">"
           case ver
           when "<"
-            if build_and_install(pkg, "-Uvh") == MOMO_LOOP then
+            if build_and_install(pkg, "-Uvh", name_stack) == MOMO_LOOP then
               return MOMO_LOOP
             end
           else
@@ -85,14 +85,14 @@ def chk_requires
           when "="
             next
           else
-            if build_and_install(pkg, "-Uvh") == MOMO_LOOP then
+            if build_and_install(pkg, "-Uvh", name_stack) == MOMO_LOOP then
               return MOMO_LOOP
             end
           end
         when ">="
           case ver
           when "<"
-            if build_and_install(pkg, "-Uvh") then
+            if build_and_install(pkg, "-Uvh", name_stack) then
               return MOMO_LOOP
             end
           else
@@ -116,7 +116,8 @@ rpm -ivh する関係上、sudo が password 無しで実行可能
 
 spec ファイルのデータベースを参照する。
 =end
-def chk_requires_strict(name)
+def chk_requires_strict(hTAG, name_stack)
+  name = hTAG['NAME']
   brs = $DEPGRAPH.db.specs[name].buildRequires
   return  if brs.nil?
   brs.each do |req|
@@ -148,7 +149,7 @@ def chk_requires_strict(name)
     next unless $DEPGRAPH.db.packages[req.name]
     $DEPGRAPH.db.packages[req.name].each do |a|
       spec = $DEPGRAPH.db.specs[a.spec]
-      if build_and_install(req.name, '-Uvh', spec.name) == MOMO_LOOP then
+      if build_and_install(req.name, '-Uvh', name_stack,spec.name) == MOMO_LOOP then
         return MOMO_LOOP
       end
     end
@@ -156,8 +157,8 @@ def chk_requires_strict(name)
 end # def chk_requires_strict
 
 
-def check_group
-  $hTAG['GROUP'].split(/,\s*/).each do |g|
+def check_group(hTAG)
+  hTAG['GROUP'].split(/,\s*/).each do |g|
     if GROUPS.rindex(g) == nil then
       if !$SCRIPT then
         print "\n#{RED}!! No such group (#{g}) !!\n"
@@ -170,7 +171,8 @@ def check_group
   end
 end
 
-def build_and_install(pkg, rpmflg, specname=nil)
+def build_and_install(pkg, rpmflg, name_stack, specname=nil)
+
   return if pkg == "" or (pkg =~ /^kernel\-/ &&
                             pkg !~ /^kernel-(common|pcmcia-cs|doc|utils)/ )
   if specname then
@@ -210,15 +212,15 @@ def build_and_install(pkg, rpmflg, specname=nil)
   if !$NONFREE && File.exist?("#{specname||pkg}/TO.Nonfree")
     return
   end
-  _t = $hTAG.dup
+  _t = hTAG.dup
   _l = $LOG_PATH
   
-  if buildme(specname||pkg) == MOMO_LOOP then
+  if buildme(specname||pkg, name_stack) == MOMO_LOOP then
     return MOMO_LOOP
   end
   topdir = get_topdir
   $LOG_PATH = _l
-  $hTAG = _t
+  hTAG = _t
   
   pkgs = []
   if specname and $DEPGRAPH then
@@ -229,7 +231,7 @@ def build_and_install(pkg, rpmflg, specname=nil)
         if not $SYSTEM_PROVIDES.has_name?(req.name) then
           if $DEPGRAPH.db.packages[req.name] then
             $DEPGRAPH.db.packages[req.name].each do |a|
-              build_and_install(a.spec, rpmflg)
+              build_and_install(a.spec, rpmflg, name_stack)
             end
           end
         end
@@ -270,8 +272,8 @@ def build_and_install(pkg, rpmflg, specname=nil)
   end
 
   if !$VERBOSEOUT then
-    print "#{$hTAG['NAME']} "
-    print "-" * [51 - $hTAG['NAME'].length, 1].max, "> "
+    print "#{hTAG['NAME']} "
+    print "-" * [51 - hTAG['NAME'].length, 1].max, "> "
   end
 end
 

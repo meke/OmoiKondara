@@ -31,7 +31,8 @@ end # if not $NOSTRICT then
 
 if ARGV.length == 0 then
   if $DEPEND_PACKAGE == "" then
-    recursive_build "./"
+    name_stack = Array.new
+    recursive_build("./", name_stack)
   else
     $FORCE = true
     dep = `env LANG=C sudo rpm -e --test #{$DEPEND_PACKAGE} 2>&1`
@@ -42,14 +43,16 @@ if ARGV.length == 0 then
         sp += [`rpm -q --queryformat "%{SOURCERPM}" #{pkg}`.split(/\-/)[0..-3].join('-')]
       end
     end
-    buildme $DEPEND_PACKAGE
+    name_stack = Array.new
+    buildme($DEPEND_PACKAGE, name_stack)
     spkgs = sp.sort.uniq
-    spkgs.each {|pkg| buildme pkg}
+    spkgs.each {|pkg| buildme(pkg, name_stack)}
   end
 else
+  name_stack = Array.new
   ARGV.each do |av|
     av = av.chop if av =~ /^.+\/$/
-    buildme(av)
+    buildme(av, name_stack)
   end
 end
 

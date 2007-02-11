@@ -33,6 +33,10 @@ rescue LoadError
   $CANNOTSTRICT = true
 end
 
+def momo_assert
+  raise "Assertion failed !" unless yield
+end
+
 =begin
 ---  exec_command(command, timeout = false)
 引数で指定されたコマンドを実行し、出力をログに記録する。timeoutがtrue の
@@ -104,12 +108,12 @@ class IO
   end
 end
 
-def get_topdir(cwd = "")
+def get_topdir(hTAG, cwd = "")
   topdir = File.expand_path $TOPDIR
   if cwd != "" then
-    todir = Dir.glob("#{cwd}/#{$hTAG['NAME']}/TO.*").sort
+    todir = Dir.glob("#{cwd}/#{hTAG['NAME']}/TO.*").sort
   else
-    todir = Dir.glob("#{$hTAG['NAME']}/TO.*").sort
+    todir = Dir.glob("#{hTAG['NAME']}/TO.*").sort
   end
   if todir != [] then
     topdir = topdir + "-" + todir[0].split(/\./)[-1]
@@ -124,8 +128,8 @@ end
 --- prepare_dirs(directories)
 引数で指定されたディレクトリを作成する
 =end
-def prepare_dirs(directories)
-  Dir.chdir $hTAG["NAME"]
+def prepare_dirs(hTAG, directories)
+  Dir.chdir hTAG["NAME"]
   directories.each do |d|
     i = 0
     d.split("/").each do |cd|

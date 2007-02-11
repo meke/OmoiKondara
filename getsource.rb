@@ -15,20 +15,20 @@ SOURCES ディレクトリに用意する。ローカルに既に存在す
 から取得する。どちらにも無い場合はミラーサイトから取
 得する。
 =end
-def get_no(type)
-  unless $hTAG.key?("NO#{type}")
+def get_no(hTAG, type)
+  unless hTAG.key?("NO#{type}")
     return true
   end
-  nosrc = $hTAG["NO#{type}"].split(/[\s,]/)
+  nosrc = hTAG["NO#{type}"].split(/[\s,]/)
   nosrc.delete ""
   status = 0
   nosrc.each do |no|
-    file = $hTAG["#{type}#{no}"]
-    file = $hTAG["#{type}"] if no == "0" and file.nil?
+    file = hTAG["#{type}#{no}"]
+    file = hTAG["#{type}"] if no == "0" and file.nil?
     if file =~ /^(ftp|https?):\/\// then
       n = file.split(/\//)[-1]
-      if !cp_local(n) then
-        Dir.chdir "#{$hTAG['NAME']}/SOURCES"
+      if !cp_local(hTAG, n) then
+        Dir.chdir "#{hTAG['NAME']}/SOURCES"
         status = -1
         if $MIRROR_FIRST then
           status = get_from_mirror n
@@ -52,8 +52,8 @@ def get_no(type)
         Dir.chdir "../.."
       end
     else
-      if !cp_local(file) then
-        Dir.chdir "#{$hTAG['NAME']}/SOURCES"
+      if !cp_local(hTAG, file) then
+        Dir.chdir "#{hTAG['NAME']}/SOURCES"
         status = get_from_mirror file
         Dir.chdir "../.."
       end
@@ -69,9 +69,9 @@ Sourece/Patch/Icon タグで指定されているファイルをビルド
 ツリーにコピーする。すでに存在する際には co されている
 物と比較し違う物の場合はコピーする
 =end
-def cp_to_tree
-  Dir.chdir $hTAG['NAME']
-  $hTAG.each do |t, v|
+def cp_to_tree(hTAG)
+  Dir.chdir hTAG['NAME']
+  hTAG.each do |t, v|
     if t =~ /^(SOURCE|PATCH|ICON)\d*/ then
       v = v.split(/\//)[-1] if v =~ /\//
       if !File.exist?("SOURCES/#{v}") then
@@ -124,15 +124,15 @@ def ftpsearch(file)
   return -1
 end
 
-def cp_local(n)
-  topdir = get_topdir
+def cp_local(hTAG, n)
+  topdir = get_topdir(hTAG)
   if File.exist?("#{topdir}/SOURCES/#{n}") then
-    if File.exist?("#{$hTAG['NAME']}/SOURCES/#{n}") then
+    if File.exist?("#{hTAG['NAME']}/SOURCES/#{n}") then
       md5SRC = `md5sum #{topdir}/SOURCES/#{n}`.split[0]
-      md5DEST = `md5sum #{$hTAG['NAME']}/SOURCES/#{n}`.split[0]
+      md5DEST = `md5sum #{hTAG['NAME']}/SOURCES/#{n}`.split[0]
       return true if md5SRC == md5DEST
     end
-    exec_command "cp -pfv #{topdir}/SOURCES/#{n} #{$hTAG['NAME']}/SOURCES"
+    exec_command "cp -pfv #{topdir}/SOURCES/#{n} #{hTAG['NAME']}/SOURCES"
     return true
   end
   exec_command("echo #{topdir}/SOURCES/#{n} is missing")

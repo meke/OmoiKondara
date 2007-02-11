@@ -8,15 +8,15 @@ def backup_logfile(pkg)
   `bzip2 -f -9 '#{pkg}/#{$LOG_FILE}.#{suffix}'` if $LOG_FILE_COMPRESS
 end # def backup_logfile(pkg)
 
-def backup_nosources
+def backup_nosources(hTAG)
   topdir = get_topdir ".."
-  if ($hTAG["NOSOURCE"] != nil && !$SRPM_ONLY) then
-    $hTAG["NOSOURCE"].split(/[\s,]/).each do |n|
+  if (hTAG["NOSOURCE"] != nil && !$SRPM_ONLY) then
+    hTAG["NOSOURCE"].split(/[\s,]/).each do |n|
       if n != "" then
-        if n == "0" && ! $hTAG.key?("SOURCE0")
-          s = $hTAG["SOURCE"]
+        if n == "0" && ! hTAG.key?("SOURCE0")
+          s = hTAG["SOURCE"]
         else
-          s = $hTAG["SOURCE#{n}"]
+          s = hTAG["SOURCE#{n}"]
         end
         s = s.split(/\//)[-1] if s =~ /^(ftp|https?):\/\//
         exec_command "cp -pfv SOURCES/#{s} #{topdir}/SOURCES"
@@ -24,13 +24,13 @@ def backup_nosources
       end
     end
   end
-  if ($hTAG.key?("NOPATCH") && !$SRPM_ONLY) then
-    $hTAG["NOPATCH"].split(/[\s,]/).each do |n|
+  if (hTAG.key?("NOPATCH") && !$SRPM_ONLY) then
+    hTAG["NOPATCH"].split(/[\s,]/).each do |n|
       if n != "" then
-        if n == "0" && ! $hTAG.key?("PATCH0") then
-          s = $hTAG["PATCH"]
+        if n == "0" && ! hTAG.key?("PATCH0") then
+          s = hTAG["PATCH"]
         else
-          s = $hTAG["PATCH#{n}"]
+          s = hTAG["PATCH#{n}"]
         end
         s = s.split(/\//)[-1] if s =~ /^(ftp|https?):\/\//
         exec_command "cp -pfv SOURCES/#{s} #{topdir}/SOURCES"

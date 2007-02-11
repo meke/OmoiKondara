@@ -11,7 +11,8 @@ require 'backup'
 #
 #  rpmbuild を実行する
 # 
-def do_rpm(pkg)
+def do_rpmbuild(hTAG)
+  pkg = hTAG['NAME']
   STDOUT.flush
   Dir.chdir pkg
   install = false
@@ -82,11 +83,11 @@ def do_rpm(pkg)
   end
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
   if rpmerr == 0 then
-    clean_up(pkg,install) if $RPMOPT =~ /\-ba|\-bb|\-bs/
+    clean_up(hTAG,install) if $RPMOPT =~ /\-ba|\-bb|\-bs/
   else
     if $WORKDIR then
-      workdir = $WORKDIR + "/" + $hTAG["NAME"] + "-" +
-        $hTAG["VERSION"] + "-" + $hTAG["RELEASE"]
+      workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
+        hTAG["VERSION"] + "-" + hTAG["RELEASE"]
       if $DEBUG_FLAG then
         $stderr.puts "INFO: workdir is #{workdir}"
       end
@@ -111,13 +112,13 @@ end
 # pkg を ビルドする
 # $NAME_STACK から pkg を pop
 #
-def buildme(pkg)
+def buildme(pkg, name_stack)
   ret = nil
-  if $NAME_STACK.include?(pkg) then
+  if name_stack.include?(pkg) then
     ret = MOMO_LOOP
     return
   end
-  $NAME_STACK.push(pkg)
+  name_stack.push(pkg)
   if !$GLOBAL_NOCCACHE then
     if Dir.glob("#{pkg}/NO.CCACHE").length == 0 then
       if ENV['PATH'] !~ /ccache/ && `rpm -q ccache 2>/dev/null` =~ /^ccache/ then
@@ -157,6 +158,7 @@ def buildme(pkg)
     print "-" * [51 - pkg.length, 1].max, "> "
     STDOUT.flush
   end
+
   ret = catch(:exit_buildme) do
     if test(?e, "#{pkg}/#{$NOTFILE}")
       throw :exit_buildme, MOMO_SKIP
@@ -186,35 +188,38 @@ def buildme(pkg)
         
         if $NOSTRICT then
           s = IO.read("#{pkg}/#{pkg}.spec")
-          strip_spec s
+          hTAG = strip_spec s
         else
-          make_hTAG(pkg)
+          hTAG = make_hTAG(pkg)
         end
-        check_group
+
+        momo_assert{ "#{pkg}" == "#{hTAG['NAME']}" }
+
+        check_group(hTAG)
         if $GROUPCHECK then
           throw :exit_buildme, MOMO_SKIP
         end
         if ($ARCH_DEP_PKGS_ONLY and
-              ($hTAG['BUILDARCHITECTURES'] == "noarch" or
-                 $hTAG['BUILDARCH'] == "noarch")) then
+              (hTAG['BUILDARCHITECTURES'] == "noarch" or
+                 hTAG['BUILDARCH'] == "noarch")) then
           throw :exit_buildme, MOMO_SKIP
         end
         
-        $LOG_PATH = "#{Dir.pwd}/#{$hTAG['NAME']}"
+        $LOG_PATH = "#{Dir.pwd}/#{hTAG['NAME']}"
         
         if !$SRPM_ONLY then
           rc = 0
           if $NOSTRICT then
-            rc = chk_requires
+            rc = chk_requires(hTAG, name_stack)
           else
-            rc = chk_requires_strict pkg
+            rc = chk_requires_strict(hTAG, name_stack)
           end
           if rc == MOMO_LOOP then
             throw :exit_buildme, MOMO_LOOP
           end
         end
         
-        topdir = get_topdir
+        topdir = get_topdir(hTAG)
         if Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").length != 0 then
           match_srpm = ""
           Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").each do |srpms|
@@ -232,23 +237,23 @@ def buildme(pkg)
         end
         
         if $WORKDIR then
-          if File.exist?($hTAG["NAME"] + "/BUILD") then
-            exec_command "rm -rf #{$hTAG['NAME']}/BUILD"
+          if File.exist?(hTAG["NAME"] + "/BUILD") then
+            exec_command "rm -rf #{hTAG['NAME']}/BUILD"
             if $DEBUG_FLAG then
               $stderr.puts "\n"
-              $stderr.puts "MSG: exec_command rm -rf #{$hTAG['NAME']}/BUILD"
+              $stderr.puts "MSG: exec_command rm -rf #{hTAG['NAME']}/BUILD"
             end
           end
           
-          if FileTest.symlink?($hTAG["NAME"] + "/BUILD") then
-            File.unlink($hTAG["NAME"] + "/BUILD")
+          if FileTest.symlink?(hTAG["NAME"] + "/BUILD") then
+            File.unlink(hTAG["NAME"] + "/BUILD")
             if $DEBUG_FLAG then
-              $stderr.puts "MSG: File.unlink #{$hTAG['NAME']}/BUILD"
+              $stderr.puts "MSG: File.unlink #{hTAG['NAME']}/BUILD"
             end
           end
           
-          workdir = $WORKDIR + "/" + $hTAG["NAME"] + "-" +
-            $hTAG["VERSION"] + "-" + $hTAG["RELEASE"]
+          workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
+            hTAG["VERSION"] + "-" + hTAG["RELEASE"]
           if $DEBUG_FLAG then
             $stderr.puts "INFO: workdir is #{workdir}"
           end
@@ -260,26 +265,26 @@ def buildme(pkg)
             end
           end
           
-          File.symlink(workdir, $hTAG["NAME"] + "/BUILD")
+          File.symlink(workdir, hTAG["NAME"] + "/BUILD")
           if $DEBUG_FLAG then
-            $stderr.puts "MSG: symlink #{workdir} #{$hTAG["NAME"]}/BUILD"
+            $stderr.puts "MSG: symlink #{workdir} #{hTAG["NAME"]}/BUILD"
           end
         else
-          prepare_dirs(["BUILD"])
+          prepare_dirs(hTAG, ["BUILD"])
         end
-        prepare_dirs(["SOURCES", "RPMS/#{$ARCHITECTURE}", "RPMS/noarch", "SRPMS"])
-        if !get_no("SOURCE") then
+        prepare_dirs(hTAG,["SOURCES", "RPMS/#{$ARCHITECTURE}", "RPMS/noarch", "SRPMS"])
+        if !get_no(hTAG, "SOURCE") then
           throw :exit_buildme, MOMO_FAILURE
         end
-        if !get_no("PATCH") then
+        if !get_no(hTAG, "PATCH") then
           throw :exit_buildme, MOMO_FAILURE
         end
-        cp_to_tree
-        Dir.chdir "#{$hTAG['NAME']}"
+        cp_to_tree(hTAG)
+        Dir.chdir "#{hTAG['NAME']}"
         prepare_outputdirs
-        backup_nosources
+        backup_nosources(hTAG)
         Dir.chdir '..'
-        throw :exit_buildme, do_rpm(pkg)
+        throw :exit_buildme, do_rpmbuild(hTAG)
       else
         throw :exit_buildme, MOMO_SKIP
       end
@@ -326,13 +331,13 @@ ensure
   end
   if ret == MOMO_LOOP then
     STDERR.puts "BuildRequire and/or BuildPreReq is looped:"
-    $NAME_STACK.each{|a| STDERR.puts "  #{a}"}
+    name_stack.each{|a| STDERR.puts "  #{a}"}
   end
-  $NAME_STACK.pop
+  name_stack.pop
   ret
 end
 
-def recursive_build(path)
+def recursive_build(path, name_stack)
   pwd = Dir.pwd
   Dir.chdir path
   for pn in `ls ./`
@@ -340,14 +345,14 @@ def recursive_build(path)
     if File.directory?(pn) && pn != "BUILD" then
       if pn != "CVS" && pn != "." && pn != ".." &&
           File.exist?("#{pn}/#{pn}.spec") then
-        recursive_build pn
+        recursive_build(pn, name_stack)
       end
     else
       if pn =~ /^.+\.spec$/ &&
           ( File.exist?("CVS/Repository") || File.exist?(".svn/entries") ) then
         pkg = Dir.pwd.split("/")[-1]
         Dir.chdir ".."
-        buildme(pkg)
+        buildme(pkg, name_stack)
         Dir.chdir pkg
       end
     end
@@ -357,7 +362,8 @@ end
 
 
 
-def clean_up(pkg, install)
+def clean_up(hTAG, install)
+  pkg=hTAG['NAME']
   prepare_outputdirs
   backup_rpms(install, pkg)
   exec_command "rpmbuild --rmsource --rcfile rpmrc #{pkg}.spec"
@@ -380,8 +386,8 @@ def clean_up(pkg, install)
   end
 
   if $WORKDIR then
-    workdir = $WORKDIR + "/" + $hTAG["NAME"] + "-" +
-      $hTAG["VERSION"] + "-" + $hTAG["RELEASE"]
+    workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
+      hTAG["VERSION"] + "-" + hTAG["RELEASE"]
     if File.exist?("SU.PLEASE") then
       exec_command "sudo rm -rf ./BUILD"
       exec_command "sudo rm -rf #{workdir}"
