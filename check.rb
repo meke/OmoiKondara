@@ -6,7 +6,9 @@ TAG BuildPreReq, BuildRequires 行に記述されているパッ
 rpm -ivh する関係上、sudo が password 無しで実行可能
 である事。
 =end
-def chk_requires(hTAG, name_stack, blacklist)
+def chk_requires(hTAG, name_stack, blacklist, log_file)
+  momo_debug_log("chk_requires #{hTAG['NAME']}")
+
   req = Array.new
   if hTAG.key?("BUILDPREREQ") then
     req = hTAG["BUILDPREREQ"].split(/[\s,]/)
@@ -28,7 +30,7 @@ def chk_requires(hTAG, name_stack, blacklist)
     r = r.split(/\-/)[0..-2].join("-") if r =~ /\-devel/
 
     if ir.length != 2 then
-      rc = build_and_install(r, "-Uvh", name_stack, blacklist) 
+      rc = build_and_install(r, "-Uvh", name_stack, blacklist, log_file) 
       case rc
       when MOMO_LOOP, MOMO_FAILURE
         return rc
@@ -76,7 +78,7 @@ def chk_requires(hTAG, name_stack, blacklist)
         when ">"
           case ver
           when "<"
-            rc = build_and_install(pkg, "-Uvh", name_stack, blacklist) 
+            rc = build_and_install(pkg, "-Uvh", name_stack, blacklist, log_file) 
             case rc 
             when MOMO_LOOP, MOMO_FAILURE
               return rc
@@ -89,7 +91,7 @@ def chk_requires(hTAG, name_stack, blacklist)
           when "="
             next
           else
-            rc = build_and_install(pkg, "-Uvh", name_stack, blacklist) 
+            rc = build_and_install(pkg, "-Uvh", name_stack, blacklist, log_file) 
             case rc 
             when MOMO_LOOP, MOMO_FAILURE
               return rc
@@ -98,7 +100,7 @@ def chk_requires(hTAG, name_stack, blacklist)
         when ">="
           case ver
           when "<"
-            rc = build_and_install(pkg, "-Uvh", name_stack, blacklist) 
+            rc = build_and_install(pkg, "-Uvh", name_stack, blacklist, log_file) 
             case rc 
             when MOMO_LOOP, MOMO_FAILURE
               return rc
@@ -125,7 +127,8 @@ rpm -ivh する関係上、sudo が password 無しで実行可能
 
 spec ファイルのデータベースを参照する。
 =end
-def chk_requires_strict(hTAG, name_stack, blacklist)
+def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
+  momo_debug_log("chk_requires_strict #{hTAG['NAME']}")
   result = MOMO_UNDEFINED
 
   name = hTAG['NAME']
@@ -164,7 +167,7 @@ def chk_requires_strict(hTAG, name_stack, blacklist)
     next unless $DEPGRAPH.db.packages[req.name]
     $DEPGRAPH.db.packages[req.name].each do |a|
       spec = $DEPGRAPH.db.specs[a.spec]
-      rc = build_and_install(req.name, '-Uvh', name_stack, blacklist, spec.name)
+      rc = build_and_install(req.name, '-Uvh', name_stack, blacklist, log_file, spec.name)
       case rc 
       when MOMO_LOOP, MOMO_FAILURE
         result = rc
@@ -198,7 +201,7 @@ end
 #
 #
 #
-def build_and_install(pkg, rpmflg, name_stack, blacklist, specname=nil)
+def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil)  
   momo_debug_log("build_and_install pkg:#{pkg} rpkflg:#{rpmflg} specname:#{specname}")
 
   result = MOMO_UNDEFINED
@@ -278,7 +281,8 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, specname=nil)
         if not $SYSTEM_PROVIDES.has_name?(req.name) then
           if $DEPGRAPH.db.packages[req.name] then
             $DEPGRAPH.db.packages[req.name].each do |a|
-              result = build_and_install(a.spec, rpmflg, name_stack, blacklist)
+              result = build_and_install(a.spec, rpmflg, 
+                                         name_stack, blacklist, log_file)
               case result 
               when MOMO_LOOP, MOMO_FAILURE 
                 return
@@ -293,7 +297,8 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, specname=nil)
     end
   end
 
-  topdir = File.expand_path(pkg)
+
+  topdir = get_topdir(pkg)
 
   pkgs = Dir.glob("#{topdir}/#{$ARCHITECTURE}/#{pkg}-*.rpm")
   pkgs += Dir.glob("#{topdir}/noarch/#{pkg}-*.rpm")

@@ -335,13 +335,13 @@ def prepare_builddirs(hTAG, log_file)
   prepare_dirs(hTAG,["SOURCES", "RPMS/#{$ARCHITECTURE}", "RPMS/noarch", "SRPMS"])
 end
 
-def prepare_buildreqs(hTAG, name_stack, blacklist)
+def prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
   momo_debug_log("prepare_buildreqs #{hTAG['NAME']}")
   rc = MOMO_SUCCESS
   if $NOSTRICT then
-    rc = chk_requires(hTAG, name_stack, blacklist)
+    rc = chk_requires(hTAG, name_stack, blacklist, log_file)
   else
-    rc = chk_requires_strict(hTAG, name_stack, blacklist)
+    rc = chk_requires_strict(hTAG, name_stack, blacklist, log_file)
   end
 
   momo_debug_log("prepare_buildreqs returns #{rc}");
@@ -421,7 +421,7 @@ def buildme(pkg, name_stack, blacklist)
     srpm_only = is_srpm_only(pkg)
     # buildreq を解析して，必要なパッケージを build & install
     if !srpm_only then
-      prepare_buildreqs(hTAG, name_stack, blacklist)
+      prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
     end
 
     # ビルド用ディレクトリを作り，ソースコードをダウンロード or コピー
