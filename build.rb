@@ -8,7 +8,10 @@ require 'check'
 require 'getsource'
 require 'backup'
 
-
+# カレントディレクトリに rpmrc を生成する
+#
+# !!FIXME!!  現状では path== Dir.pwd の場合しか動作しないと思われる
+#
 def generate_rpmrc(path)
   if $DEBUG_FLAG then
     `grep -v macrofiles ../rpmrc.debug > rpmrc`
@@ -41,14 +44,14 @@ def generate_rpmrc(path)
   end
 end
 
-#
 #  rpmbuild を実行する
 #  buildme から呼ばれる
 def do_rpmbuild(hTAG, log_file)
-  momo_debug_log("do_rpmbuild #{hTAG['NAME']}")
+  result = MOMO_UNDEFINED
 
   pkg = hTAG['NAME']
-  
+  momo_debug_log("do_rpmbuild #{pkg}")
+
   Dir.chdir pkg
 
   STDOUT.flush
@@ -132,6 +135,12 @@ def do_rpmbuild(hTAG, log_file)
     rpmerr = exec_command("#{lang} #{cmd}", log_file, need_timeout)
   end
 
+  if 0 == rpmerr then
+    result = MOMO_SUCCESS
+  else
+    result = MOMO_FAILURE
+  end
+
   # 後始末
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
   if rpmerr == 0 then
@@ -155,8 +164,10 @@ def do_rpmbuild(hTAG, log_file)
     end
   end
 
+ensure
   Dir.chdir ".."
-  return rpmerr
+  momo_debug_log("do_rpmbuild returns #{result}")
+  return result
 end
 
 # rpmbuild 成功時の処理
@@ -262,7 +273,7 @@ def is_build_required(hTAG)
   end
 
   # *.rpm と *.spec のタイムスタンプを比較
-  topdir = get_topdir(hTAG)
+  topdir = get_topdir(hTAG['NAME'])
   if Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").length != 0 then
     match_srpm = ""
     Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").each do |srpms|
@@ -334,7 +345,9 @@ def prepare_buildreqs(hTAG, name_stack)
   end
 
   momo_debug_log("prepare_buildreqs returns #{rc}");
-  if MOMO_LOOP == rc then
+  
+  case rc
+  when MOMO_LOOP, MOMO_FAILURE
     throw :exit_buildme, rc
   end
 end
@@ -353,7 +366,7 @@ end
 def prepare_outputdirs(hTAG, log_file)
   momo_debug_log("prepare_outputdirs #{hTAG['NAME']}")
 
-  topdir = get_topdir(hTAG, "..")
+  topdir = get_topdir(hTAG['NAME'], "..")
   ["SOURCES", "SRPMS", "#{$ARCHITECTURE}", "noarch"].each do |subdir|
     if !File.directory?("#{topdir}/#{subdir}") then
       exec_command("mkdir -p #{topdir}/#{subdir}", log_file)
@@ -367,6 +380,8 @@ end
 # $NAME_STACK から pkg を pop
 #
 def buildme(pkg, name_stack)
+  momo_debug_log("buildme pkg:#{pkg}")
+
   log_file = nil
   if !$VERBOSEOUT then
     print "\r#{pkg} "
@@ -489,6 +504,8 @@ def recursive_build(path, name_stack)
       end
     end
   end
+
+ensure
   Dir.chdir pwd
 end
 

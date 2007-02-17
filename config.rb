@@ -2,7 +2,7 @@
 #
 # 定数
 
-# buildme などの返り値
+# buildme(), chk_requires(), build_and_install() などの返り値
 #
 MOMO_SUCCESS  =  0  #  ビルド成功
 MOMO_SKIP     =  1  #  SKIP
@@ -10,8 +10,8 @@ MOMO_FAILURE  =  2  #  失敗
 MOMO_OBSOLETE =  3  #  OBSOLETE
 MOMO_LOOP     =  4  #  依存関係にループがあったため失敗
 
-
 MOMO_NO_SUCH_PACKAGE = 10  # パッケージが存在しない
+MOMO_UNDEFINED  = 999 # 内部エラー状態
 
 # configration系
 #

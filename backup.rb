@@ -11,7 +11,7 @@ end # def backup_logfile(log_file)
 def backup_nosources(hTAG, srpm_only, log_file)
   momo_debug_log("backup_nosources #{hTAG['NAME']}")
 
-  topdir = get_topdir(hTAG, "..")
+  topdir = get_topdir(hTAG['NAME'], "..")
   if (hTAG["NOSOURCE"] != nil && !srpm_only) then
     hTAG["NOSOURCE"].split(/[\s,]/).each do |n|
       if n != "" then
@@ -49,8 +49,8 @@ end
 されている場合には、新しいパッケージのインストールもする。
 =end
 def backup_rpms(hTAG, install, rpmopt, log_file)
-  topdir = get_topdir(hTAG, "..")
   specname = hTAG['NAME']
+  topdir = get_topdir(specname, "..")
   if specname and $DEPGRAPH then
     spec = $DEPGRAPH.db.specs[specname]
     spec.lastbuild = Time.now

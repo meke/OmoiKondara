@@ -125,7 +125,7 @@ def ftpsearch(file, log_file)
 end
 
 def cp_local(hTAG, n, log_file)
-  topdir = get_topdir(hTAG)
+  topdir = get_topdir(hTAG['NAME'])
   if File.exist?("#{topdir}/SOURCES/#{n}") then
     if File.exist?("#{hTAG['NAME']}/SOURCES/#{n}") then
       md5SRC = `md5sum #{topdir}/SOURCES/#{n}`.split[0]

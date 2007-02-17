@@ -114,12 +114,12 @@ class IO
   end
 end
 
-def get_topdir(hTAG, cwd = "")
+def get_topdir(specname, cwd = "")
   topdir = File.expand_path $TOPDIR
   if cwd != "" then
-    todir = Dir.glob("#{cwd}/#{hTAG['NAME']}/TO.*").sort
+    todir = Dir.glob("#{cwd}/#{specname}/TO.*").sort
   else
-    todir = Dir.glob("#{hTAG['NAME']}/TO.*").sort
+    todir = Dir.glob("#{specname}/TO.*").sort
   end
   if todir != [] then
     topdir = topdir + "-" + todir[0].split(/\./)[-1]
