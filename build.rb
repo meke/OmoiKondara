@@ -335,13 +335,13 @@ def prepare_builddirs(hTAG, log_file)
   prepare_dirs(hTAG,["SOURCES", "RPMS/#{$ARCHITECTURE}", "RPMS/noarch", "SRPMS"])
 end
 
-def prepare_buildreqs(hTAG, name_stack)
+def prepare_buildreqs(hTAG, name_stack, blacklist)
   momo_debug_log("prepare_buildreqs #{hTAG['NAME']}")
   rc = MOMO_SUCCESS
   if $NOSTRICT then
-    rc = chk_requires(hTAG, name_stack)
+    rc = chk_requires(hTAG, name_stack, blacklist)
   else
-    rc = chk_requires_strict(hTAG, name_stack)
+    rc = chk_requires_strict(hTAG, name_stack, blacklist)
   end
 
   momo_debug_log("prepare_buildreqs returns #{rc}");
@@ -379,7 +379,7 @@ end
 # pkg を ビルドする
 # $NAME_STACK から pkg を pop
 #
-def buildme(pkg, name_stack)
+def buildme(pkg, name_stack, blacklist)
   momo_debug_log("buildme pkg:#{pkg}")
 
   log_file = nil
@@ -392,6 +392,11 @@ def buildme(pkg, name_stack)
   ret = catch(:exit_buildme) do
     if !File.exist?("#{pkg}/#{pkg}.spec") then
       throw :exit_buildme, MOMO_NO_SUCH_PACKAGE
+    end
+    
+    # blacklist に登録されているpkgは 容赦なく MOMO_FAILURE
+    if blacklist.include?(pkg) then
+      throw :exit_buildme, MOMO_FAILURE
     end
 
     # ループの検出
@@ -416,7 +421,7 @@ def buildme(pkg, name_stack)
     srpm_only = is_srpm_only(pkg)
     # buildreq を解析して，必要なパッケージを build & install
     if !srpm_only then
-      prepare_buildreqs(hTAG, name_stack)
+      prepare_buildreqs(hTAG, name_stack, blacklist)
     end
 
     # ビルド用ディレクトリを作り，ソースコードをダウンロード or コピー
@@ -466,13 +471,22 @@ ensure
         fLOG.puts "\n#{SUCCESS} : #{pkg}"
       end
     when MOMO_SKIP
-    when MOMO_FAILURE
+    when MOMO_FAILURE      
     else
       open("#{log_file}", "a") do |fLOG|
         fLOG.puts "\n#{FAILURE} : #{pkg}"
       end
     end
   end
+
+  ## ビルドに失敗したパッケージがあれば blacklist に登録
+  if ret == MOMO_FAILURE then
+    blacklist.push(pkg)
+  end
+  
+  ## !!FIXME!!
+  ## ビルドに成功したパッケージがあれば
+  ##  blacklistから関係しそうなパッケージを削除
 
   if ret == MOMO_LOOP then
     STDERR.puts "BuildRequire and/or BuildPreReq is looped:"
@@ -484,7 +498,7 @@ ensure
   return ret
 end
 
-def recursive_build(path, name_stack)
+def recursive_build(path, name_stack, blacklist)
   pwd = Dir.pwd
   Dir.chdir path
   for pn in `ls ./`
@@ -492,14 +506,14 @@ def recursive_build(path, name_stack)
     if File.directory?(pn) && pn != "BUILD" then
       if pn != "CVS" && pn != "." && pn != ".." &&
           File.exist?("#{pn}/#{pn}.spec") then
-        recursive_build(pn, name_stack)
+        recursive_build(pn, name_stack, blacklist)
       end
     else
       if pn =~ /^.+\.spec$/ &&
           ( File.exist?("CVS/Repository") || File.exist?(".svn/entries") ) then
         pkg = Dir.pwd.split("/")[-1]
         Dir.chdir ".."
-        buildme(pkg, name_stack)
+        buildme(pkg, name_stack, blacklist)
         Dir.chdir pkg
       end
     end

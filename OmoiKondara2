@@ -32,7 +32,8 @@ end # if not $NOSTRICT then
 if ARGV.length == 0 then
   if $DEPEND_PACKAGE == "" then
     name_stack = Array.new
-    recursive_build("./", name_stack)
+    blacklist = Array.new
+    recursive_build("./", name_stack, blacklist)
   else
     $FORCE = true
     dep = `env LANG=C sudo rpm -e --test #{$DEPEND_PACKAGE} 2>&1`
@@ -44,15 +45,17 @@ if ARGV.length == 0 then
       end
     end
     name_stack = Array.new
-    buildme($DEPEND_PACKAGE, name_stack)
+    blacklist = Array.new
+    buildme($DEPEND_PACKAGE, name_stack, blacklist)
     spkgs = sp.sort.uniq
-    spkgs.each {|pkg| buildme(pkg, name_stack)}
+    spkgs.each {|pkg| buildme(pkg, name_stack, blacklist)}
   end
 else
   name_stack = Array.new
+  blacklist = Array.new
   ARGV.each do |av|
     av = av.chop if av =~ /^.+\/$/
-    buildme(av, name_stack)
+    buildme(av, name_stack, blacklist)
   end
 end
 
