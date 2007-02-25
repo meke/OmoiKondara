@@ -170,10 +170,10 @@ found_ftp_cmd = false
 ftp_cmd_name = $FTP_CMD.split[0]
 "#{ENV['PATH']}:../tools/v2".split(/:/).each do |path|
   path = File.expand_path(path)
-  if found_rpmvercmp == false && FileTest.exists?("#{path}/rpmvercmp")
+  if found_rpmvercmp == false && FileTest.exist?("#{path}/rpmvercmp")
     found_rpmvercmp = true
   end
-  if found_ftp_cmd == false && FileTest.exists?("#{path}/#{ftp_cmd_name}")
+  if found_ftp_cmd == false && FileTest.exist?("#{path}/#{ftp_cmd_name}")
     found_ftp_cmd = true
   end
 end
