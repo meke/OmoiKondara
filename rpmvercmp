@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+import rpm, sys
+
+if __name__ == '__main__':
+        if len(sys.argv) != 3:
+                sys.stderr.write(sys.argv[0] + " ver1 ver2\n")
+                sys.exit()
+        else:
+                ret = rpm.labelCompare((sys.argv[1],"",""),(sys.argv[2],"",""))
+
+if ret > 0:
+        print(">")
+elif ret == 0:
+        print("=")
+else:
+        print("<")
+
+sys.exit(ret)
