@@ -38,7 +38,7 @@ def momo_assert
 end
 
 def momo_debug_log(msg)
-  STDERR.puts msg
+  STDERR.puts msg if $VERBOSEOUT
 end
 
 =begin
