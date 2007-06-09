@@ -179,7 +179,7 @@ ftp_cmd_name = $FTP_CMD.split[0]
 end
 if found_rpmvercmp == false
   $stderr.puts "FATAL: rpmvercmp not found."
-  $stderr.puts "F.Y.I: please execute make command in directory 'tools'"
+  $stderr.puts "F.Y.I: please svn update"
   exit 1
 end
 if found_ftp_cmd == false
