@@ -501,7 +501,7 @@ end
 def recursive_build(path, name_stack, blacklist)
   pwd = Dir.pwd
   Dir.chdir path
-  for pn in `ls ./`
+  `ls ./`.each_line do |pn|
     pn.chop!
     if File.directory?(pn) && pn != "BUILD" then
       if pn != "CVS" && pn != "." && pn != ".." &&
