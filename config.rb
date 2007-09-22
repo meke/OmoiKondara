@@ -211,6 +211,7 @@ end
     "Applications/System",
     "Applications/Text",
     "Development/Debuggers",
+    "Development/Debug",
     "Development/Languages",
     "Development/Libraries",
     "Development/System",
