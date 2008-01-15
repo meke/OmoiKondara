@@ -112,7 +112,7 @@ begin
 
     class IO
       def IO.read(path, length=nil, offset=nil)
-        port = open(path)
+        port = File.open(path)
         port.pos = offset if offset
         rv = nil
         begin
