@@ -127,6 +127,10 @@ end
 def cp_local(hTAG, n, log_file)
   topdir = get_topdir(hTAG['NAME'])
   if File.exist?("#{topdir}/SOURCES/#{n}") then
+    if $FORCE_FETCH then
+      File.unlink("#{topdir}/SOURCES/#{n}")
+      return false
+    end
     if File.exist?("#{hTAG['NAME']}/SOURCES/#{n}") then
       md5SRC = `md5sum #{topdir}/SOURCES/#{n}`.split[0]
       md5DEST = `md5sum #{hTAG['NAME']}/SOURCES/#{n}`.split[0]

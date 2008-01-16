@@ -77,6 +77,8 @@ Usage: ../tools/OmoiKondara [options] [names]
   -c, --cvs               (ignored. remained for compatibility)
   -d, --depend "DEPENDS"  specify dependencies
   -f, --force             force build
+  -F  --force-fetch       force fetch NoSource/NoPatch
+  -o  --check-only        checksum compare(run "rpmbuild -bp")
   -g, --checkgroup        group check only
   -i, --install           force install after build (except kernel and usolame)
   -m, --main              main package only
@@ -154,6 +156,8 @@ end
   $ARCH_DEP_PKGS_ONLY = false
   $IGNORE_REMOVE      = false
   $FTP_CMD            = ""
+  $FORCE_FETCH        = false
+  $CHECK_ONLY         = false
   $DISPLAY            = ":0.0"
   $LOG_FILE           = "OmoiKondara.log"
   $LOG_FILE_COMPRESS  = true
@@ -235,6 +239,8 @@ options = [
   ["-c", "--cvs",          GetoptLong::NO_ARGUMENT],
   ["-d", "--depend",       GetoptLong::REQUIRED_ARGUMENT],
   ["-f", "--force",        GetoptLong::NO_ARGUMENT],
+  ["-F", "--force-fetch",  GetoptLong::NO_ARGUMENT],
+  ["-o", "--check-only",   GetoptLong::NO_ARGUMENT],
   ["-g", "--checkgroup",   GetoptLong::NO_ARGUMENT],
   ["-i", "--install",      GetoptLong::NO_ARGUMENT],
   ["-m", "--main",         GetoptLong::NO_ARGUMENT],
@@ -277,6 +283,10 @@ begin
       $INSTALL = true
     when "-m"
 #      $MAIN_ONLY = true
+    when "-F"
+      $FORCE_FETCH = true
+    when "-o"
+      $CHECK_ONLY = true
     when "-n"
       $NONFREE = true
       $MAIN_ONLY = false

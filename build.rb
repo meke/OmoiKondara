@@ -96,9 +96,12 @@ def do_rpmbuild(hTAG, log_file)
   if is_srpm_only(pkg) then
     rpmopt = "-bs"
   end
+  if $CHECK_ONLY then # -o option
+    rpmopt = "-bp"
+  end
   rpmopt += " --target #{$ARCHITECTURE}"
   
-  if !$IGNORE_REMOVE && File.exist?("REMOVE.PLEASE") && /\-ba|\-bb/ =~ rpmopt then
+  if !$IGNORE_REMOVE && !$CHECK_ONLY && File.exist?("REMOVE.PLEASE") && /\-ba|\-bb/ =~ rpmopt then
     # .spec をパースしてすべてのサブパッケージを消すべき。
     # すべての .spec の依存関係がただしければ、依存するものも
     # 全消去するべき。
@@ -144,7 +147,7 @@ def do_rpmbuild(hTAG, log_file)
   # 後始末
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
   if rpmerr == 0 then
-    clean_up(hTAG, install, rpmopt, log_file) if rpmopt =~ /\-ba|\-bb|\-bs/
+    clean_up(hTAG, install, rpmopt, log_file) if rpmopt =~ /\-ba|\-bb|\-bs|\-bp/
   else
     if $WORKDIR then
       workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
@@ -310,7 +313,24 @@ def prepare_builddirs(hTAG, log_file)
         $stderr.puts "MSG: File.unlink #{hTAG['NAME']}/BUILD"
       end
     end
-    
+
+    if $FORCE_FETCH then
+      if File.exist?($hTAG["NAME"] + "/SOURCES") then
+        exec_command "rm -rf #{$hTAG['NAME']}/SOURCES"
+        if $DEBUG_FLAG then
+          $stderr.puts "\n"
+          $stderr.puts "MSG: exec_command rm -rf #{$hTAG['NAME']}/SOURCES"
+        end
+      end
+
+      if FileTest.symlink?($hTAG["NAME"] + "/SOURCES") then
+        File.unlink($hTAG["NAME"] + "/SOURCES")
+        if $DEBUG_FLAG then
+          $stderr.puts "MSG: File.unlink #{$hTAG['NAME']}/SOURCES"
+        end
+      end
+    end
+
     workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
       hTAG["VERSION"] + "-" + hTAG["RELEASE"]
     if $DEBUG_FLAG then
@@ -514,6 +534,9 @@ def recursive_build(path, name_stack, blacklist)
         pkg = Dir.pwd.split("/")[-1]
         Dir.chdir ".."
         buildme(pkg, name_stack, blacklist)
+        if $CHECK_ONLY then
+          next
+        end
         Dir.chdir pkg
       end
     end
