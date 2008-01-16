@@ -186,8 +186,11 @@ def clean_up(hTAG, install, rpmopt, log_file)
   File.delete "rpmrc"
   File.delete "rpmmacros"
 
-  # DEBUG_FLAG が non nilだとBUILDを消さないで残す
-  if $DEBUG_FLAG then
+  # $DEBUG_FLAG が non nilだとBUILDを消さないで残す
+  # $CHECK_ONLY が non nilの場合もBUILDを消さないで残す (-o option)
+  # $DEF_RPMOPT が non nilの場合もBUILDを消さないで残す (-r -bpとかの場合)
+  # !!FIXME!! -r -baの場合は消したほうがいい気がするが残してしまう。未実装
+  if $DEBUG_FLAG or $CHECK_ONLY or $DEF_RPMOPT then
     if File.exist?("SU.PLEASE") then
       exec_command("sudo rm -rf SOURCES RPMS SRPMS", log_file)
     else
@@ -195,9 +198,9 @@ def clean_up(hTAG, install, rpmopt, log_file)
     end
   else
     if File.exist?("SU.PLEASE") then
-      exec_command("sudo rm -rf SOURCES BUILD RPMS SRPMS", log_file)
+      exec_command("sudo rm -rf SOURCES RPMS SRPMS BUILD ", log_file)
     else
-      exec_command("rm -rf SOURCES BUILD RPMS SRPMS", log_file)
+      exec_command("rm -rf SOURCES RPMS SRPMS BUILD ", log_file)
     end
   end
 
