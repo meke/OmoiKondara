@@ -188,9 +188,8 @@ def clean_up(hTAG, install, rpmopt, log_file)
 
   # $DEBUG_FLAG が non nilだとBUILDを消さないで残す
   # $CHECK_ONLY が non nilの場合もBUILDを消さないで残す (-o option)
-  # $DEF_RPMOPT が non nilの場合もBUILDを消さないで残す (-r -bpとかの場合)
-  # !!FIXME!! -r -baの場合は消したほうがいい気がするが残してしまう。未実装
-  if $DEBUG_FLAG or $CHECK_ONLY or $DEF_RPMOPT then
+  # $DEF_RPMOPT に -bp が含まれる場合もBUILDを消さないで残す(-r -bp の場合)
+  if $DEBUG_FLAG or $CHECK_ONLY or /\-bp/ =~ $DEF_RPMOPT then
     if File.exist?("SU.PLEASE") then
       exec_command("sudo rm -rf SOURCES RPMS SRPMS", log_file)
     else
