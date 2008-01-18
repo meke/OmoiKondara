@@ -187,9 +187,8 @@ def clean_up(hTAG, install, rpmopt, log_file)
   File.delete "rpmmacros"
 
   # $DEBUG_FLAG が non nilだとBUILDを消さないで残す
-  # $CHECK_ONLY が non nilの場合もBUILDを消さないで残す (-o option)
   # $DEF_RPMOPT に -bp が含まれる場合もBUILDを消さないで残す(-r -bp の場合)
-  if $DEBUG_FLAG or $CHECK_ONLY or /\-bp/ =~ $DEF_RPMOPT then
+  if $DEBUG_FLAG or /\-bp/ =~ $DEF_RPMOPT then
     if File.exist?("SU.PLEASE") then
       exec_command("sudo rm -rf SOURCES RPMS SRPMS", log_file)
     else
