@@ -405,6 +405,7 @@ def buildme(pkg, name_stack, blacklist)
 
   log_file = nil
   if !$VERBOSEOUT then
+    # 最終的な出力はensure句にて行う事に注意
     print "\r#{pkg} "
     print "-" * [51 - pkg.length, 1].max, "> "
     STDOUT.flush
@@ -459,6 +460,8 @@ def buildme(pkg, name_stack, blacklist)
   
 ensure
   if !$VERBOSEOUT then
+    print "\r#{pkg} "
+    print "-" * [51 - pkg.length, 1].max, "> "
     case ret
     when MOMO_NO_SUCH_PACKAGE
     when nil
