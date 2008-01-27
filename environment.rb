@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env ruby19
 # $Id: environment.rb,v 1.6 2003/10/22 14:47:37 kazuhiko Exp $
 
 # $ rd2 -rrd/rd2man-lib <this_file> | nroff -man
