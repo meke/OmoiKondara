@@ -382,6 +382,57 @@ def prepare_sources(hTAG, log_file)
     throw :exit_buildme, MOMO_FAILURE
   end
   cp_to_tree(hTAG, log_file)
+
+  # compare sha512sum
+  if File.exist?("#{hTAG['NAME']}/sources") then
+    srcs = Array.new
+    hTAG["NOSOURCE"].split(/[\s,]/).each { |no|
+      uri = hTAG["SOURCE#{no}"]
+      uri = hTAG["SOURCE"] if no == "0" and uri.nil?
+      if /^(ftp|https?):\/\// =~ uri then
+        srcs << uri.split(/\//)[-1]
+      end
+    }
+    hTAG["NOPATCH"].split(/[\s,]/).each { |no|
+      uri = hTAG["PATCH#{no}"]
+      uri = hTAG["PATCH"] if no == "0" and uri.nil?
+      if /^(ftp|https?):\/\// =~ uri then
+        srcs << uri.split(/\//)[-1]
+      end
+    }
+
+    sums = Hash.new
+    open("#{hTAG['NAME']}/sources") { |f|
+      while l = f.gets
+        if /^([0-9abcdef]+)\s+([^\s]+)/ =~ l then
+          sums[$2] = $1
+        end
+      end
+    }
+
+    rslt = nil
+    open("#{log_file}", "a") { |f|
+      f.print "\n"
+      print "\n" if $VERBOSEOUT
+      rslt = srcs.map { |s|
+        s_sha512 = `sha512sum #{hTAG['NAME']}/SOURCES/#{s}`.split[0]
+        f.print "compare sha512sum of #{s}: #{s_sha512} == #{sums[s]}"
+        print "compare sha512sum of #{s}: #{s_sha512} == #{sums[s]}" if $VERBOSEOUT
+        c = (s_sha512 == sums[s])
+        if c then
+          f.print " ... YES\n"
+          print " ... YES\n" if $VERBOSEOUT
+        else
+          f.print " ... NO\n"
+          print ": ... NO\n" if $VERBOSEOUT
+        end
+        c
+      }
+    }
+    unless rslt.inject(true) { |x, y| x && y }
+      throw :exit_buildme, MOMO_FAILURE        
+    end
+  end
 end
 
 def prepare_outputdirs(hTAG, log_file)
