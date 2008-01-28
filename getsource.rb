@@ -3,7 +3,7 @@
 # get_no          NoSource/NoPatchタグで指定されたファイルを 
 #                 SOURCES 以下に用意する
 #
-# cp_to_tree      Sourece/Patch/Icon タグで指定されているファイルを
+# cp_to_tree      Source/Patch/Icon タグで指定されているファイルを
 #                 SOURCES 以下に用意する
 
 
@@ -134,7 +134,7 @@ def cp_local(hTAG, n, log_file)
     if File.exist?("#{hTAG['NAME']}/SOURCES/#{n}") then
       sha2SRC = `sha512sum #{topdir}/SOURCES/#{n}`.split[0]
       sha2DST = `sha512sum #{hTAG['NAME']}/SOURCES/#{n}`.split[0]
-      return true if sha2SRC == sha2DET
+      return true if sha2SRC == sha2DST
     end
     exec_command("cp -pfv #{topdir}/SOURCES/#{n} #{hTAG['NAME']}/SOURCES", log_file)
     return true
