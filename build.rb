@@ -383,7 +383,7 @@ def prepare_sources(hTAG, log_file)
   end
   cp_to_tree(hTAG, log_file)
 
-  # compare sha512sum
+  # compare sha256sum
   if File.exist?("#{hTAG['NAME']}/sources") then
     srcs = Array.new
     hTAG["NOSOURCE"].split(/[\s,]/).each { |no|
@@ -415,10 +415,10 @@ def prepare_sources(hTAG, log_file)
       f.print "\n"
       print "\n" if $VERBOSEOUT
       rslt = srcs.map { |s|
-        s_sha512 = `sha512sum #{hTAG['NAME']}/SOURCES/#{s}`.split[0]
-        f.print "compare sha512sum of #{s}: #{s_sha512} == #{sums[s]}"
-        print "compare sha512sum of #{s}: #{s_sha512} == #{sums[s]}" if $VERBOSEOUT
-        c = (s_sha512 == sums[s])
+        s_sha2 = `sha256sum #{hTAG['NAME']}/SOURCES/#{s}`.split[0]
+        f.print "compare sha256sum of #{s}: #{s_sha2} == #{sums[s]}"
+        print "compare sha256sum of #{s}: #{s_sha2} == #{sums[s]}" if $VERBOSEOUT
+        c = (s_sha2 == sums[s])
         if c then
           f.print " ... YES\n"
           print " ... YES\n" if $VERBOSEOUT
