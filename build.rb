@@ -405,7 +405,7 @@ def prepare_sources(hTAG, log_file)
     open("#{hTAG['NAME']}/sources") { |f|
       while l = f.gets
         if /^([0-9abcdef]+)\s+([^\s]+)/ =~ l then
-          sums[$2] = $1
+          sums[File.basename($2)] = $1
         end
       end
     }
