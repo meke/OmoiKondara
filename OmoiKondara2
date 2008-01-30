@@ -3,6 +3,10 @@
 # $Id: OmoiKondara 11691 2006-10-12 14:28:36Z ryu $
 
 $:.unshift(File.dirname($0))
+if FileTest.symlink?($0) then
+	$:.unshift(File.dirname($0) + "/v2")
+end
+
 require 'environment'
 require 'getoptlong'
 require 'timeout'
