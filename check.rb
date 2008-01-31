@@ -1,10 +1,10 @@
 =begin
 --- chk_requires
-TAG BuildPreReq, BuildRequires ¹Ô¤Ëµ­½Ò¤µ¤ì¤Æ¤¤¤ë¥Ñ¥Ã
-¥±¡¼¥¸¤¬¤¢¤ì¤Ğ¤½¤Î¥Ñ¥Ã¥±¡¼¥¸¤¬¥¤¥ó¥¹¥È¡¼¥ë¤µ¤ì¤Æ¤¤¤ë
-¤«¤É¤¦¤«È½ÃÇ¤·¡¢É¬Í×¤Ê¤é¤Ğ¥¤¥ó¥¹¥È¡¼¥ë¤¹¤ë¡£
-rpm -ivh ¤¹¤ë´Ø·¸¾å¡¢sudo ¤¬ password Ìµ¤·¤Ç¼Â¹Ô²ÄÇ½
-¤Ç¤¢¤ë»ö¡£
+TAG BuildPreReq, BuildRequires è¡Œã«è¨˜è¿°ã•ã‚Œã¦ã„ã‚‹ãƒ‘ãƒƒ
+ã‚±ãƒ¼ã‚¸ãŒã‚ã‚Œã°ãã®ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ãŒã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã•ã‚Œã¦ã„ã‚‹
+ã‹ã©ã†ã‹åˆ¤æ–­ã—ã€å¿…è¦ãªã‚‰ã°ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã™ã‚‹ã€‚
+rpm -ivh ã™ã‚‹é–¢ä¿‚ä¸Šã€sudo ãŒ password ç„¡ã—ã§å®Ÿè¡Œå¯èƒ½
+ã§ã‚ã‚‹äº‹ã€‚
 =end
 def chk_requires(hTAG, name_stack, blacklist, log_file)
   momo_debug_log("chk_requires #{hTAG['NAME']}")
@@ -21,11 +21,11 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
 
   req.delete ""
   while r = req.shift do
-    # Ä¾ÀÜ¥Õ¥¡¥¤¥ëÌ¾¤¬»ØÄê¤µ¤ì¤Æ¤¤¤ë
-    # ¥Ñ¥Ã¥±¡¼¥¸Ì¾¤ò»ØÄê¤¹¤Ù¤·
+    # ç›´æ¥ãƒ•ã‚¡ã‚¤ãƒ«åãŒæŒ‡å®šã•ã‚Œã¦ã„ã‚‹
+    # ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸åã‚’æŒ‡å®šã™ã¹ã—
     next  if r =~ /\//
 
-    # ¥¤¥ó¥¹¥È¡¼¥ëºÑ¤Î¾ì¹ç ir = <epoch>:<ver>-<rel>
+    # ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«æ¸ˆã®å ´åˆ ir = <epoch>:<ver>-<rel>
     ir = `rpm -q --queryformat '%{EPOCH}:%{VERSION}-%{RELEASE}' #{r} 2>/dev/null`.split(':')
     r = r.split(/\-/)[0..-2].join("-") if r =~ /\-devel/
 
@@ -35,7 +35,7 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
       when MOMO_LOOP, MOMO_FAILURE
         return rc
       end
-      # ¥Ğ¡¼¥¸¥ç¥ó¾ğÊó¤ò¥¹¥­¥Ã¥×¤¹¤ë
+      # ãƒãƒ¼ã‚¸ãƒ§ãƒ³æƒ…å ±ã‚’ã‚¹ã‚­ãƒƒãƒ—ã™ã‚‹
       if req[0] =~ /[<>=]/ then
         req.shift
         req.shift
@@ -119,13 +119,13 @@ end
 
 =begin
 --- chk_requires_strict(pkg_name)
-TAG BuildPreReq, BuildRequires ¹Ô¤Ëµ­½Ò¤µ¤ì¤Æ¤¤¤ë¥Ñ¥Ã
-¥±¡¼¥¸¤¬¤¢¤ì¤Ğ¤½¤Î¥Ñ¥Ã¥±¡¼¥¸¤¬¥¤¥ó¥¹¥È¡¼¥ë¤µ¤ì¤Æ¤¤¤ë
-¤«¤É¤¦¤«È½ÃÇ¤·¡¢É¬Í×¤Ê¤é¤Ğ¥¤¥ó¥¹¥È¡¼¥ë¤¹¤ë¡£
-rpm -ivh ¤¹¤ë´Ø·¸¾å¡¢sudo ¤¬ password Ìµ¤·¤Ç¼Â¹Ô²ÄÇ½
-¤Ç¤¢¤ë»ö¡£
+TAG BuildPreReq, BuildRequires è¡Œã«è¨˜è¿°ã•ã‚Œã¦ã„ã‚‹ãƒ‘ãƒƒ
+ã‚±ãƒ¼ã‚¸ãŒã‚ã‚Œã°ãã®ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ãŒã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã•ã‚Œã¦ã„ã‚‹
+ã‹ã©ã†ã‹åˆ¤æ–­ã—ã€å¿…è¦ãªã‚‰ã°ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã™ã‚‹ã€‚
+rpm -ivh ã™ã‚‹é–¢ä¿‚ä¸Šã€sudo ãŒ password ç„¡ã—ã§å®Ÿè¡Œå¯èƒ½
+ã§ã‚ã‚‹äº‹ã€‚
 
-spec ¥Õ¥¡¥¤¥ë¤Î¥Ç¡¼¥¿¥Ù¡¼¥¹¤ò»²¾È¤¹¤ë¡£
+spec ãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚’å‚ç…§ã™ã‚‹ã€‚
 =end
 def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
   momo_debug_log("chk_requires_strict #{hTAG['NAME']}")
@@ -262,7 +262,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     return
   end
   
-  # ³ºÅö¥Ñ¥Ã¥±¡¼¥¸¤ò¥Ó¥ë¥É¤¹¤ë
+  # è©²å½“ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ã‚’ãƒ“ãƒ«ãƒ‰ã™ã‚‹
   #
   result = buildme(specname||pkg, name_stack, blacklist) 
   case result 

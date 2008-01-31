@@ -1,4 +1,4 @@
-# --  backup�� --------------------------------------------------------------
+# --  backup系 --------------------------------------------------------------
 
 def backup_logfile(log_file)
   return  unless File.exist?("#{log_file}")
@@ -44,9 +44,9 @@ end
 
 =begin
 --- backup_rpms(hTAG, install, log_file)
-�ӥ�ɤ��줿RPM�ե�����θŤ��С������Τ�Τ�topdir�ʲ��γƥǥ��쥯��
-�꤫��õ����������Τ�topdir�γƥǥ��쥯�ȥ�˥��ԡ����롣�����ǻ���
-����Ƥ�����ˤϡ��������ѥå������Υ��󥹥ȡ���⤹�롣
+ビルドされたRPMファイルの古いバージョンのものをtopdir以下の各ディレクト
+リから消去し、新しいものをtopdirの各ディレクトリにコピーする。引数で指定
+されている場合には、新しいパッケージのインストールもする。
 =end
 def backup_rpms(hTAG, install, rpmopt, log_file)
   specname = hTAG['NAME']

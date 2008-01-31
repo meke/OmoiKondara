@@ -1,22 +1,22 @@
 # strip_spec()
 # make_hTAG()
 #
-# spec �����ơ�TAG�Ȥ����͡ˤ� �ϥå���Ȥ����֤��ؿ�
-# ξ�Ԥΰ㤤�ϡ�DEPGRAPH��Ȥ�(make_hTAG)�����Ȥ�ʤ�(strip_spec)���ˤ��롥
+# spec の内容（TAGとその値）を ハッシュとして返す関数
+# 両者の違いは，DEPGRAPHを使う(make_hTAG)か，使わない(strip_spec)かにある．
 #
-# �ǥե���ȤǤ� make_hTAG ���Ȥ��롥
+# デフォルトでは make_hTAG が使われる．
 
 =begin
 --- strip_spec(spec_as_string)
 
-ʸ����spec��ѡ������ơ�TAG(key)�Ȥ�����(value)����ʤ�ϥå�����֤�
+文字列specをパースして，TAG(key)とその値(value)からなるハッシュを返す
 
-�������ƤȤ��Ƥϡ�%define ����� %global �Ԥ��ڤ�Ф� spec ��Υޥ�����
-�֤�������Name TAG �� Version TAG �ʤ�¾�� TAG �ǻ��Ѥ�����ǽ���Τ�
-��ʪ���֤������ơ�Hash hTAG ���������롣���κݤˡ�TAG̾ �Ϥ��٤���ʸ��
-�Ȥ��Ƴ�Ǽ���롣
+処理内容としては，%define および %global 行を切り出し spec 中のマクロを
+置き換えるName TAG や Version TAG など他の TAG で使用される可能性のあ
+る物は置き換えて、Hash hTAG を生成する。その際に、TAG名 はすべて大文字
+として格納する。
 
-buildme����ƤФ��
+buildmeから呼ばれる
 =end
 def strip_spec(spec)
   macro = {}
@@ -78,10 +78,10 @@ def strip_spec(spec)
 end
 
 #
-# DEPGRAPH ��Ȥ����ѥå�����̾ #{name} �� specfile���
-# TAG(key)�Ȥ�����(value)����ʤ�ϥå�����֤�
+# DEPGRAPH を使い，パッケージ名 #{name} の specfile中の
+# TAG(key)とその値(value)からなるハッシュを返す
 #
-# buildme����ƤФ��
+# buildmeから呼ばれる
 #
 def make_hTAG(name)
   hTAG = {}
@@ -115,7 +115,7 @@ end # def make_hTAG(name)
 
 
 #
-# strip_spec���������Ѥ���륵�֥롼����
+# strip_spec内部で利用されるサブルーチン
 # 
 def pre_process_strip(spec, macros={})
   s = ""
@@ -154,7 +154,7 @@ def pre_process_strip(spec, macros={})
 end
 
 #
-# strip_spec���������Ѥ���륵�֥롼����
+# strip_spec内部で利用されるサブルーチン
 # 
 def expand_macros(str, macros={})
   str = str.dup

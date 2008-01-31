@@ -43,9 +43,9 @@ end
 
 =begin
 ---  exec_command(command, timeout = false)
-°ú¿ô¤Ç»ØÄê¤µ¤ì¤¿¥³¥Ş¥ó¥É¤ò¼Â¹Ô¤·¡¢½ĞÎÏ¤ò¥í¥°¤Ëµ­Ï¿¤¹¤ë¡£timeout¤¬true ¤Î
-¾ì¹ç¤Ë¤Ï¡¢¥¿¥¤¥à¥¢¥¦¥È¤¹¤ëgets (gets_with_timeout) ¤ò»È¤Ã¤Æ¡¢É¸½à½ĞÎÏ ¤ò
-ÊÄ¤¸¤º¤Ë½ª¤ï¤Ã¤Æ¤·¤Ş¤¦»Ò¥×¥í¥»¥¹¤¬defunct¤Ë¤Ê¤ë¤Î¤òËÉ¤°¡£
+å¼•æ•°ã§æŒ‡å®šã•ã‚ŒãŸã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œã—ã€å‡ºåŠ›ã‚’ãƒ­ã‚°ã«è¨˜éŒ²ã™ã‚‹ã€‚timeoutãŒtrue ã®
+å ´åˆã«ã¯ã€ã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã™ã‚‹gets (gets_with_timeout) ã‚’ä½¿ã£ã¦ã€æ¨™æº–å‡ºåŠ› ã‚’
+é–‰ã˜ãšã«çµ‚ã‚ã£ã¦ã—ã¾ã†å­ãƒ—ãƒ­ã‚»ã‚¹ãŒdefunctã«ãªã‚‹ã®ã‚’é˜²ãã€‚
 =end
 def exec_command(cmd, log_file, timeout = false)
   momo_assert{ nil != log_file }
@@ -102,7 +102,7 @@ end
 
 =begin
 --- IO::gets_with_timeout (sec)
-gets¤¹¤ë¤¬¡¢secÉÃ°ÊÆâ¤Ë½ªÎ»¤·¤Ê¤¤¾ì¹ç¤Ë¤ÏTimeoutError¤òraise¤¹¤ë¡£
+getsã™ã‚‹ãŒã€secç§’ä»¥å†…ã«çµ‚äº†ã—ãªã„å ´åˆã«ã¯TimeoutErrorã‚’raiseã™ã‚‹ã€‚
 =end
 class IO
   def gets_with_timeout (sec)
@@ -128,11 +128,11 @@ def get_topdir(specname, cwd = "")
 end
 
 
-# --- ¥Ç¥£¥ì¥¯¥È¥êºîÀ®·Ï
+# --- ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªä½œæˆç³»
 
 =begin
 --- prepare_dirs(directories)
-°ú¿ô¤Ç»ØÄê¤µ¤ì¤¿¥Ç¥£¥ì¥¯¥È¥ê¤òºîÀ®¤¹¤ë
+å¼•æ•°ã§æŒ‡å®šã•ã‚ŒãŸãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ä½œæˆã™ã‚‹
 =end
 def prepare_dirs(hTAG, directories)
   Dir.chdir hTAG["NAME"]

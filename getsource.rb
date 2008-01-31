@@ -1,19 +1,19 @@
 #
 #
-# get_no          NoSource/NoPatch�����ǻ��ꤵ�줿�ե������ 
-#                 SOURCES �ʲ����Ѱդ���
+# get_no          NoSource/NoPatchタグで指定されたファイルを 
+#                 SOURCES 以下に用意する
 #
-# cp_to_tree      Source/Patch/Icon �����ǻ��ꤵ��Ƥ���ե������
-#                 SOURCES �ʲ����Ѱդ���
+# cp_to_tree      Source/Patch/Icon タグで指定されているファイルを
+#                 SOURCES 以下に用意する
 
 
 =begin
 --- get_no(source_or_patch)
-NoSource/NoPatch �����ǻ��ꤵ��Ƥ��륽����/�ѥå���
-SOURCES �ǥ��쥯�ȥ���Ѱդ��롣��������˴���¸�ߤ�
-����Ϥ������Ѥ���̵�����Τߵ��Ҥ���Ƥ��� URL
-����������롣�ɤ���ˤ�̵�����ϥߥ顼�����Ȥ����
-�����롣
+NoSource/NoPatch タグで指定されているソース/パッチを
+SOURCES ディレクトリに用意する。ローカルに既に存在す
+る場合はそれを使用し、無い場合のみ記述されている URL
+から取得する。どちらにも無い場合はミラーサイトから取
+得する。
 =end
 def get_no(hTAG, type, log_file)
   unless hTAG.key?("NO#{type}")
@@ -65,9 +65,9 @@ end
 
 =begin
 --- cp_to_tree
-Sourece/Patch/Icon �����ǻ��ꤵ��Ƥ���ե������ӥ��
-�ĥ꡼�˥��ԡ����롣���Ǥ�¸�ߤ���ݤˤ� co ����Ƥ���
-ʪ����Ӥ��㤦ʪ�ξ��ϥ��ԡ�����
+Sourece/Patch/Icon タグで指定されているファイルをビルド
+ツリーにコピーする。すでに存在する際には co されている
+物と比較し違う物の場合はコピーする
 =end
 def cp_to_tree(hTAG, log_file)
   Dir.chdir hTAG['NAME']
@@ -89,14 +89,14 @@ def cp_to_tree(hTAG, log_file)
   Dir.chdir ".."
 end
 
-# ----------- �ʲ����֥롼����
+# ----------- 以下サブルーチン
 
 
 =begin
 --- get_from_mirror(filename)
-�����ǻ��ꤵ�줿�ե������ߥ顼�����Ȥ���������롣
-.OmoiKondara �� MIRROR �ǵ��Ҥ���Ƥ��� URL �� SOURCES/
-��ä�����꤫���������
+引数で指定されたファイルをミラーサイトから取得する。
+.OmoiKondara に MIRROR で記述されている URL に SOURCES/
+を加えた場所から取得する
 =end
 def get_from_mirror(n, log_file)
   $MIRROR.each do |m|

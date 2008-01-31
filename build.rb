@@ -8,9 +8,9 @@ require 'check'
 require 'getsource'
 require 'backup'
 
-# ¥«¥ì¥ó¥È¥Ç¥£¥ì¥¯¥È¥ê¤Ë rpmrc ¤òÀ¸À®¤¹¤ë
+# ã‚«ãƒ¬ãƒ³ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã« rpmrc ã‚’ç”Ÿæˆã™ã‚‹
 #
-# !!FIXME!!  ¸½¾õ¤Ç¤Ï path== Dir.pwd ¤Î¾ì¹ç¤·¤«Æ°ºî¤·¤Ê¤¤¤È»×¤ï¤ì¤ë
+# !!FIXME!!  ç¾çŠ¶ã§ã¯ path== Dir.pwd ã®å ´åˆã—ã‹å‹•ä½œã—ãªã„ã¨æ€ã‚ã‚Œã‚‹
 #
 def generate_rpmrc(path)
   if $DEBUG_FLAG then
@@ -44,8 +44,8 @@ def generate_rpmrc(path)
   end
 end
 
-#  rpmbuild ¤ò¼Â¹Ô¤¹¤ë
-#  buildme ¤«¤é¸Æ¤Ğ¤ì¤ë
+#  rpmbuild ã‚’å®Ÿè¡Œã™ã‚‹
+#  buildme ã‹ã‚‰å‘¼ã°ã‚Œã‚‹
 def do_rpmbuild(hTAG, log_file)
   result = MOMO_UNDEFINED
 
@@ -57,7 +57,7 @@ def do_rpmbuild(hTAG, log_file)
   STDOUT.flush
   install = false
 
-  # ´Ä¶­ÊÑ¿ô¤ÎÀßÄê
+  # ç’°å¢ƒå¤‰æ•°ã®è¨­å®š
   if !$GLOBAL_NOCCACHE then
     if Dir.glob("#{pkg}/NO.CCACHE").length == 0 then
       if ENV['PATH'] !~ /ccache/ && `rpm -q ccache 2>/dev/null` =~ /^ccache/ then
@@ -88,10 +88,10 @@ def do_rpmbuild(hTAG, log_file)
     ENV["CACHECC1_DISTCCDIR"] = $CACHECC1_DISTCCDIR
   end
 
-  # ¥«¥ì¥ó¥È¥Ç¥£¥ì¥¯¥È¥ê¤Ë rpmrc ¤òÀ¸À®
+  # ã‚«ãƒ¬ãƒ³ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã« rpmrc ã‚’ç”Ÿæˆ
   generate_rpmrc(Dir.pwd)
 
-  # rpmbuild ¤Î¥ª¥×¥·¥ç¥ó
+  # rpmbuild ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³
   rpmopt = $DEF_RPMOPT
   if is_srpm_only(pkg) then
     rpmopt = "-bs"
@@ -102,9 +102,9 @@ def do_rpmbuild(hTAG, log_file)
   rpmopt += " --target #{$ARCHITECTURE}"
   
   if !$IGNORE_REMOVE && !$CHECK_ONLY && File.exist?("REMOVE.PLEASE") && /\-ba|\-bb/ =~ rpmopt then
-    # .spec ¤ò¥Ñ¡¼¥¹¤·¤Æ¤¹¤Ù¤Æ¤Î¥µ¥Ö¥Ñ¥Ã¥±¡¼¥¸¤ò¾Ã¤¹¤Ù¤­¡£
-    # ¤¹¤Ù¤Æ¤Î .spec ¤Î°ÍÂ¸´Ø·¸¤¬¤¿¤À¤·¤±¤ì¤Ğ¡¢°ÍÂ¸¤¹¤ë¤â¤Î¤â
-    # Á´¾Ãµî¤¹¤ë¤Ù¤­¡£
+    # .spec ã‚’ãƒ‘ãƒ¼ã‚¹ã—ã¦ã™ã¹ã¦ã®ã‚µãƒ–ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ã‚’æ¶ˆã™ã¹ãã€‚
+    # ã™ã¹ã¦ã® .spec ã®ä¾å­˜é–¢ä¿‚ãŒãŸã ã—ã‘ã‚Œã°ã€ä¾å­˜ã™ã‚‹ã‚‚ã®ã‚‚
+    # å…¨æ¶ˆå»ã™ã‚‹ã¹ãã€‚
     RPM.readrc("./rpmrc")
     RPM::Spec.open(pkg+".spec").packages.each do |subpkg|
       exec_command("sudo rpm -e --nodeps #{subpkg.name}", log_file)
@@ -129,7 +129,7 @@ def do_rpmbuild(hTAG, log_file)
   lang = lang.size.zero? ? "" : "env #{lang[0]} "
   need_timeout = File.exist?("TIMEOUT.PLEASE")
 
-  # rpmbuild ¤Î¼Â¹Ô
+  # rpmbuild ã®å®Ÿè¡Œ
   rpmerr = nil
   cmd = "rpmbuild --rcfile rpmrc #{rpmopt} #{pkg}.spec"
   if File.exist?("SU.PLEASE") then
@@ -144,7 +144,7 @@ def do_rpmbuild(hTAG, log_file)
     result = MOMO_FAILURE
   end
 
-  # ¸å»ÏËö
+  # å¾Œå§‹æœ«
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
   if rpmerr == 0 then
     clean_up(hTAG, install, rpmopt, log_file) if rpmopt =~ /\-ba|\-bb|\-bs|\-bp/
@@ -173,8 +173,8 @@ ensure
   return result
 end
 
-# rpmbuild À®¸ù»ş¤Î½èÍı
-# do_rpmbuild() ¤«¤é¸Æ¤Ğ¤ì¤ë 
+# rpmbuild æˆåŠŸæ™‚ã®å‡¦ç†
+# do_rpmbuild() ã‹ã‚‰å‘¼ã°ã‚Œã‚‹ 
 #
 def clean_up(hTAG, install, rpmopt, log_file)
   momo_debug_log("clean_up #{hTAG['NAME']}")
@@ -186,8 +186,8 @@ def clean_up(hTAG, install, rpmopt, log_file)
   File.delete "rpmrc"
   File.delete "rpmmacros"
 
-  # $DEBUG_FLAG ¤¬ non nil¤À¤ÈBUILD¤ò¾Ã¤µ¤Ê¤¤¤Ç»Ä¤¹
-  # $DEF_RPMOPT ¤Ë -bp ¤¬´Ş¤Ş¤ì¤ë¾ì¹ç¤âBUILD¤ò¾Ã¤µ¤Ê¤¤¤Ç»Ä¤¹(-r -bp ¤Î¾ì¹ç)
+  # $DEBUG_FLAG ãŒ non nilã ã¨BUILDã‚’æ¶ˆã•ãªã„ã§æ®‹ã™
+  # $DEF_RPMOPT ã« -bp ãŒå«ã¾ã‚Œã‚‹å ´åˆã‚‚BUILDã‚’æ¶ˆã•ãªã„ã§æ®‹ã™(-r -bp ã®å ´åˆ)
   if $DEBUG_FLAG or /\-bp/ =~ $DEF_RPMOPT then
     if File.exist?("SU.PLEASE") then
       exec_command("sudo rm -rf SOURCES RPMS SRPMS", log_file)
@@ -234,7 +234,7 @@ end
 
 def is_srpm_only(pkg)
   # !!FIXME!!
-  # 2007/2/11»şÅÀ¤Ç¤Î»ÅÍÍ¤Ç¤Ï¡¤SRPM.ONLY ¤ÏÌµ»ë¤µ¤ì¤ëÌÏÍÍ
+  # 2007/2/11æ™‚ç‚¹ã§ã®ä»•æ§˜ã§ã¯ï¼ŒSRPM.ONLY ã¯ç„¡è¦–ã•ã‚Œã‚‹æ¨¡æ§˜
 
   #    if Dir.glob("#{pkg}/SRPM.ONLY").length != 0 then
   return false
@@ -266,7 +266,7 @@ def is_build_required(hTAG)
   end  
 
   check_group(hTAG)
-  ## !!FIXME!!   $GROUPCHECK¤Ï¤Ä¤Í¤Ëfalse??
+  ## !!FIXME!!   $GROUPCHECKã¯ã¤ã­ã«false??
   if $GROUPCHECK then
     return MOMO_SKIP
   end
@@ -276,7 +276,7 @@ def is_build_required(hTAG)
     return MOMO_SKIP
   end
 
-  # *.rpm ¤È *.spec ¤Î¥¿¥¤¥à¥¹¥¿¥ó¥×¤òÈæ³Ó
+  # *.rpm ã¨ *.spec ã®ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã‚’æ¯”è¼ƒ
   topdir = get_topdir(hTAG['NAME'])
   if Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").length != 0 then
     match_srpm = ""
@@ -447,16 +447,16 @@ def prepare_outputdirs(hTAG, log_file)
 end
 
 #
-# $NAME_STACK ¤Ë pkg ¤ò push
-# pkg ¤ò ¥Ó¥ë¥É¤¹¤ë
-# $NAME_STACK ¤«¤é pkg ¤ò pop
+# $NAME_STACK ã« pkg ã‚’ push
+# pkg ã‚’ ãƒ“ãƒ«ãƒ‰ã™ã‚‹
+# $NAME_STACK ã‹ã‚‰ pkg ã‚’ pop
 #
 def buildme(pkg, name_stack, blacklist)
   momo_debug_log("buildme pkg:#{pkg}")
 
   log_file = nil
   if !$VERBOSEOUT then
-    # ºÇ½ªÅª¤Ê½ĞÎÏ¤Ïensure¶ç¤Ë¤Æ¹Ô¤¦»ö¤ËÃí°Õ
+    # æœ€çµ‚çš„ãªå‡ºåŠ›ã¯ensureå¥ã«ã¦è¡Œã†äº‹ã«æ³¨æ„
     print "\r#{pkg} "
     print "-" * [51 - pkg.length, 1].max, "> "
     STDOUT.flush
@@ -467,12 +467,12 @@ def buildme(pkg, name_stack, blacklist)
       throw :exit_buildme, MOMO_NO_SUCH_PACKAGE
     end
     
-    # blacklist ¤ËÅĞÏ¿¤µ¤ì¤Æ¤¤¤ëpkg¤Ï ÍÆ¼Ï¤Ê¤¯ MOMO_FAILURE
+    # blacklist ã«ç™»éŒ²ã•ã‚Œã¦ã„ã‚‹pkgã¯ å®¹èµ¦ãªã MOMO_FAILURE
     if blacklist.include?(pkg) then
       throw :exit_buildme, MOMO_FAILURE
     end
 
-    # ¥ë¡¼¥×¤Î¸¡½Ğ
+    # ãƒ«ãƒ¼ãƒ—ã®æ¤œå‡º
     if name_stack.include?(pkg) then
       throw :exit_buildme, MOMO_LOOP
     end
@@ -480,7 +480,7 @@ def buildme(pkg, name_stack, blacklist)
 
     log_file= "#{Dir.pwd}/#{pkg}/#{$LOG_FILE}"
 
-    # spec¤Î¥¿¥°¤Î¾ğÊó¤ò ¥Ï¥Ã¥·¥å hTAG ¤Ë³ÊÇ¼
+    # specã®ã‚¿ã‚°ã®æƒ…å ±ã‚’ ãƒãƒƒã‚·ãƒ¥ hTAG ã«æ ¼ç´
     hTAG = get_specdata(pkg)
     
     ret = is_build_required(hTAG)
@@ -488,16 +488,16 @@ def buildme(pkg, name_stack, blacklist)
       throw :exit_buildme, ret
     end
 
-    # ¥Ó¥ë¥É³«»Ï
+    # ãƒ“ãƒ«ãƒ‰é–‹å§‹
     backup_logfile(log_file)
 
     srpm_only = is_srpm_only(pkg)
-    # buildreq ¤ò²òÀÏ¤·¤Æ¡¤É¬Í×¤Ê¥Ñ¥Ã¥±¡¼¥¸¤ò build & install
+    # buildreq ã‚’è§£æã—ã¦ï¼Œå¿…è¦ãªãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ã‚’ build & install
     if !srpm_only then
       prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
     end
 
-    # ¥Ó¥ë¥ÉÍÑ¥Ç¥£¥ì¥¯¥È¥ê¤òºî¤ê¡¤¥½¡¼¥¹¥³¡¼¥É¤ò¥À¥¦¥ó¥í¡¼¥É or ¥³¥Ô¡¼
+    # ãƒ“ãƒ«ãƒ‰ç”¨ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ä½œã‚Šï¼Œã‚½ãƒ¼ã‚¹ã‚³ãƒ¼ãƒ‰ã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ or ã‚³ãƒ”ãƒ¼
     prepare_builddirs(hTAG, log_file)    
     prepare_sources(hTAG, log_file)    
     Dir.chdir "#{pkg}"
@@ -505,7 +505,7 @@ def buildme(pkg, name_stack, blacklist)
     backup_nosources(hTAG, srpm_only, log_file)
     Dir.chdir '..'
     
-    # rpmbuild ¤ò¼Â¹Ô
+    # rpmbuild ã‚’å®Ÿè¡Œ
     throw :exit_buildme, do_rpmbuild(hTAG, log_file)    
   end
   
@@ -554,14 +554,14 @@ ensure
     end
   end
 
-  ## ¥Ó¥ë¥É¤Ë¼ºÇÔ¤·¤¿¥Ñ¥Ã¥±¡¼¥¸¤¬¤¢¤ì¤Ğ blacklist ¤ËÅĞÏ¿
+  ## ãƒ“ãƒ«ãƒ‰ã«å¤±æ•—ã—ãŸãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ãŒã‚ã‚Œã° blacklist ã«ç™»éŒ²
   if ret == MOMO_FAILURE then
     blacklist.push(pkg)
   end
   
   ## !!FIXME!!
-  ## ¥Ó¥ë¥É¤ËÀ®¸ù¤·¤¿¥Ñ¥Ã¥±¡¼¥¸¤¬¤¢¤ì¤Ğ
-  ##  blacklist¤«¤é´Ø·¸¤·¤½¤¦¤Ê¥Ñ¥Ã¥±¡¼¥¸¤òºï½ü
+  ## ãƒ“ãƒ«ãƒ‰ã«æˆåŠŸã—ãŸãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ãŒã‚ã‚Œã°
+  ##  blacklistã‹ã‚‰é–¢ä¿‚ã—ãã†ãªãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ã‚’å‰Šé™¤
 
   if ret == MOMO_LOOP then
     STDERR.puts "BuildRequire and/or BuildPreReq is looped:"
