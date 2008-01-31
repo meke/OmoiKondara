@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby19
+#!/usr/bin/ruby19 -Ku
 # -*- ruby-mode -*-
 # $Id: OmoiKondara 11691 2006-10-12 14:28:36Z ryu $
 

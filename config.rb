@@ -130,7 +130,7 @@ begin
 end
 
 ############ Variables ############
-  $RPM_VER    = `rpm --version`.split[2].split(/\./)[0].to_i
+  $RPM_VER    = `LANG=C ; rpm --version`.split[2].split(/\./)[0].to_i
   $DEFAULT_ARCH = $ARCH
 
   $ARCHITECTURE       = $DEFAULT_ARCH
