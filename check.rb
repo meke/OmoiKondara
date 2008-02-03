@@ -31,6 +31,7 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
 
     if ir.length != 2 then
       rc = build_and_install(r, "-Uvh", name_stack, blacklist, log_file) 
+      print_status(hTAG['NAME']) if !$VERBOSEOUT 
       case rc
       when MOMO_LOOP, MOMO_FAILURE
         return rc
@@ -79,6 +80,7 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
           case ver
           when "<"
             rc = build_and_install(pkg, "-Uvh", name_stack, blacklist, log_file) 
+            print_status(hTAG['NAME']) if !$VERBOSEOUT 
             case rc 
             when MOMO_LOOP, MOMO_FAILURE
               return rc
@@ -92,6 +94,7 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
             next
           else
             rc = build_and_install(pkg, "-Uvh", name_stack, blacklist, log_file) 
+            print_status(hTAG['NAME']) if !$VERBOSEOUT 
             case rc 
             when MOMO_LOOP, MOMO_FAILURE
               return rc
@@ -101,6 +104,7 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
           case ver
           when "<"
             rc = build_and_install(pkg, "-Uvh", name_stack, blacklist, log_file) 
+            print_status(hTAG['NAME']) if !$VERBOSEOUT 
             case rc 
             when MOMO_LOOP, MOMO_FAILURE
               return rc
@@ -168,6 +172,7 @@ def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
     $DEPGRAPH.db.packages[req.name].each do |a|
       spec = $DEPGRAPH.db.specs[a.spec]
       rc = build_and_install(req.name, '-Uvh', name_stack, blacklist, log_file, spec.name)
+      print_status(name) if !$VERBOSEOUT 
       case rc 
       when MOMO_LOOP, MOMO_FAILURE
         result = rc
@@ -283,6 +288,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
             $DEPGRAPH.db.packages[req.name].each do |a|
               result = build_and_install(a.spec, rpmflg, 
                                          name_stack, blacklist, log_file)
+              print_status(pkg) if !$VERBOSEOUT 
               case result 
               when MOMO_LOOP, MOMO_FAILURE 
                 return
@@ -339,12 +345,6 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
         end
       end
     end
-  end
-
-  if !$VERBOSEOUT then
-    name = specname||pkg
-    print "#{name} "
-    print "-" * [51 - name.length, 1].max, "> "
   end
   
   ## SUCCESS!!

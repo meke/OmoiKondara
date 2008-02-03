@@ -151,4 +151,8 @@ def prepare_dirs(hTAG, directories)
   Dir.chdir ".."
 end
 
-
+def print_status(pkg)
+    print "\r#{pkg}"
+    print "-" * [51 - pkg.length, 1].max, "> "
+    STDOUT.flush
+end
