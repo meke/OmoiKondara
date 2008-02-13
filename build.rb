@@ -182,7 +182,14 @@ def clean_up(hTAG, install, rpmopt, log_file)
   prepare_outputdirs(hTAG, log_file)
   backup_rpms(hTAG, install, rpmopt, log_file)
   pkg = hTAG['NAME']
-  exec_command("rpmbuild --rmsource --rcfile rpmrc #{pkg}.spec", log_file)
+
+  # $DEF_RPMOPT に -bp が含まれる場合は SOURCES/* を消さないで残す(-r -bp の場合)
+  if /\-bp/ =~ $DEF_RPMOPT then
+    exec_command("rpmbuild --rcfile rpmrc #{pkg}.spec", log_file)
+  else
+    exec_command("rpmbuild --rmsource --rcfile rpmrc #{pkg}.spec", log_file)
+  end
+
   File.delete "rpmrc"
   File.delete "rpmmacros"
 
