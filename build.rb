@@ -203,7 +203,7 @@ def clean_up(hTAG, install, rpmopt, log_file)
   # $DEF_RPMOPT に -bp が含まれる場合はBUILD/SOURCESを消さないで残す(-r -bp の場合)
   elsif /\-bp/ =~ $DEF_RPMOPT then
     if File.exist?("SU.PLEASE") then
-      exec_command("sudo rm -rf SOUS SRPMS", log_file)
+      exec_command("sudo rm -rf RPMS SRPMS", log_file)
     else
       exec_command("rm -rf RPMS SRPMS", log_file)
     end
