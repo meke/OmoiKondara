@@ -9,6 +9,7 @@ MOMO_SKIP     =  1  #  SKIP
 MOMO_FAILURE  =  2  #  失敗
 MOMO_OBSOLETE =  3  #  OBSOLETE
 MOMO_LOOP     =  4  #  依存関係にループがあったため失敗
+MOMO_CHECKSUM =  5  #  ファイルのチェックサムが間違っている
 
 MOMO_NO_SUCH_PACKAGE = 10  # パッケージが存在しない
 MOMO_UNDEFINED  = 999 # 内部エラー状態
@@ -190,11 +191,13 @@ end
   RED             = "\e[1;31m"
   YELLOW          = "\e[1;33m"
   BLUE            = "\e[1;34m"
+  PINK            = "\e[1;35m"
   NOCOLOR         = "\e[m"
   SUCCESS         = "Success"
   FAILURE         = "Failure"
   SKIP            = "Skip"
   OBSOLETE        = "OBSOLETE"
+  CHECKSUM        = "CheckSum"
   RETRY_FTPSEARCH = 10
   DOMAIN          = ".jp"
 

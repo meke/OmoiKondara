@@ -434,6 +434,7 @@ def prepare_sources(hTAG, log_file)
         else
           f.print " ... NO\n"
           print ": ... NO\n" if $VERBOSEOUT
+          throw(:exit_buildme, MOMO_CHECKSUM)
         end
         c
       }
@@ -532,6 +533,11 @@ ensure
     when MOMO_OBSOLETE
       print BLUE unless $SCRIPT
       print "#{OBSOLETE}"
+      print NOCOLOR unless $SCRIPT
+      print "\n"
+    when MOMO_CHECKSUM
+      print PINK unless $SCRIPT
+      print "#{CHECKSUM}"
       print NOCOLOR unless $SCRIPT
       print "\n"
     else
