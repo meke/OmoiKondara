@@ -434,13 +434,12 @@ def prepare_sources(hTAG, log_file)
         else
           f.print " ... NO\n"
           print ": ... NO\n" if $VERBOSEOUT
-          throw(:exit_buildme, MOMO_CHECKSUM)
         end
         c
       }
     }
     unless rslt.inject(true) { |x, y| x && y }
-      throw :exit_buildme, MOMO_FAILURE        
+      throw :exit_buildme, MOMO_CHECKSUM
     end
   end
 end
