@@ -197,7 +197,7 @@ end
   FAILURE         = "Failure"
   SKIP            = "Skip"
   OBSOLETE        = "OBSOLETE"
-  CHECKSUM        = "CheckSum"
+  CHECKSUM        = "Checksum"
   RETRY_FTPSEARCH = 10
   DOMAIN          = ".jp"
 
