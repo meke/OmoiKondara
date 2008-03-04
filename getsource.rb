@@ -134,12 +134,7 @@ def cp_local(hTAG, n, log_file)
     if File.exist?("#{hTAG['NAME']}/SOURCES/#{n}") then
       sha2SRC = `sha256sum #{topdir}/SOURCES/#{n}`.split[0]
       sha2DST = `sha256sum #{hTAG['NAME']}/SOURCES/#{n}`.split[0]
-      
-      if sha2SRC == sha2DST then
-        return true
-      else 
-        throw(:exit_buildme, MOMO_CHECKSUM)
-      end
+      return true if sha2SRC == sha2DST
     end
     exec_command("cp -pfv #{topdir}/SOURCES/#{n} #{hTAG['NAME']}/SOURCES", log_file)
     return true
