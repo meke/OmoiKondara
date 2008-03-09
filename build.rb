@@ -539,6 +539,11 @@ ensure
       print "#{CHECKSUM}"
       print NOCOLOR unless $SCRIPT
       print "\n"
+    when MOMO_NOTFOUND
+      print PURPLE unless $SCRIPT
+      print "#{NOTFOUND}"
+      print NOCOLOR unless $SCRIPT
+      print "\n"
     else
       print RED unless $SCRIPT
       print "#{FAILURE}"

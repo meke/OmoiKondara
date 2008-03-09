@@ -58,7 +58,7 @@ def get_no(hTAG, type, log_file)
         Dir.chdir "../.."
       end
     end
-    return false if status.nonzero?
+    throw(:exit_buildme, MOMO_NOTFOUND) if status.nonzero?
   end
   return status.zero?
 end
