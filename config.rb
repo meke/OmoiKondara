@@ -336,6 +336,4 @@ rescue
   exit 1
 end
 
-ENV['PATH'] = ENV['PATH'].split(':').select{|a| a !~ %r!/usr/bin/ccache!}.join(':')
-
 parse_conf

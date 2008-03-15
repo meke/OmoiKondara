@@ -58,14 +58,18 @@ def do_rpmbuild(hTAG, log_file)
   install = false
 
   # 環境変数の設定
-  if $GLOBAL_NOCCACHE or File.exist?("#{pkg}/NO.CCACHE") then
+  if $GLOBAL_NOCCACHE or File.exist?("NO.CCACHE") then
+    # ccahceを無効にする
     ENV['CCACHE_DISABLE'] = "yes"
+    # 念のためPATHからccacheを外す (ccache-2.4-9m以前のバグ対策)
+    ENV['PATH'] = ENV['PATH'].split(':').select{|a| a !~ %r!/usr/libexec/ccache!}.join(':')
   elsif ENV['PATH'] !~ /ccache/ && `rpm -q ccache 2>/dev/null` =~ /^ccache/ then
     ENV['PATH'] = "/usr/libexec/ccache:#{ENV['PATH']}"
   end
+
   if $GLOBAL_CACHECC1 then
-    if File.exist?("#{pkg}/NO.CACHECC1") or
-        File.exist?("#{pkg}/NO.CCACHE") then
+    if File.exist?("NO.CACHECC1") or
+        File.exist?("NO.CCACHE") then
       unless ENV['LD_PRELOAD'].nil? then
         ENV['LD_PRELOAD'] = ENV['LD_PRELOAD'].split(/ /).select{|a| a !~ %r!^/usr/lib/cachecc1\.so$!}.join(' ')
       end
