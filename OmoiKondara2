@@ -52,12 +52,19 @@ if ARGV.length == 0 then
     blacklist = Array.new
     buildme($DEPEND_PACKAGE, name_stack, blacklist)
     spkgs = sp.sort.uniq
+    if $RANDOM_ORDER then
+      spkgs = spkgs.sort_by{rand}
+    end
     spkgs.each {|pkg| buildme(pkg, name_stack, blacklist)}
   end
 else
   name_stack = Array.new
   blacklist = Array.new
-  ARGV.each do |av|
+  pkgs=ARGV
+  if $RANDOM_ORDER then
+    pkgs = pkgs.sort_by{rand}
+  end
+  pkgs.each do |av|
     av = av.chop if av =~ /^.+\/$/
     buildme(av, name_stack, blacklist)
   end

@@ -41,6 +41,19 @@ def momo_debug_log(msg)
   STDERR.puts msg if $DEBUG_FLAG
 end
 
+def momo_fatal_error(msg)
+  STDERR.puts ""
+  STDERR.puts "***** fatal error *****"
+  STDERR.puts msg
+  STDERR.puts ""
+  STDERR.puts caller.first.scan(/`(.*)'/).to_s
+  STDERR.puts ""
+  STDERR.puts ""
+  STDERR.puts "abort"
+  STDERR.puts ""
+  exit!(4)
+end
+
 =begin
 ---  exec_command(command, timeout = false)
 引数で指定されたコマンドを実行し、出力をログに記録する。timeoutがtrue の
@@ -98,7 +111,6 @@ def exec_command(cmd, log_file, timeout = false)
   end # open
   status.to_i
 end
-
 
 =begin
 --- IO::gets_with_timeout (sec)

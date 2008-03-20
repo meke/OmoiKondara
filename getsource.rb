@@ -79,6 +79,7 @@ def cp_to_tree(hTAG, log_file)
         throw(:exit_buildme, MOMO_FAILURE) if ret != 0
       else
         if File.exist?(v) then
+          # ファイルが更新されていた場合のみコピーする
           sha2SRC = `sha256sum #{v}`.split[0]
           sha2DST = `sha256sum SOURCES/#{v}`.split[0]
           exec_command("cp -pfv #{v} SOURCES",log_file) if sha2SRC != sha2DST
@@ -132,6 +133,7 @@ def cp_local(hTAG, n, log_file)
       return false
     end
     if File.exist?("#{hTAG['NAME']}/SOURCES/#{n}") then
+      # ファイルがコピー済の場合は何もしない
       sha2SRC = `sha256sum #{topdir}/SOURCES/#{n}`.split[0]
       sha2DST = `sha256sum #{hTAG['NAME']}/SOURCES/#{n}`.split[0]
       return true if sha2SRC == sha2DST

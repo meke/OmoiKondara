@@ -5,7 +5,10 @@ def backup_logfile(log_file)
   mtime = File.mtime("#{log_file}")
   suffix = mtime.strftime('%Y%m%d%H%M%S')
   File.rename("#{log_file}", "#{log_file}.#{suffix}")
-  `bzip2 -f -9 '#{log_file}.#{suffix}'` if $LOG_FILE_COMPRESS
+
+  `#{$COMPRESS_CMD} '#{log_file}.#{suffix}'` if $LOG_FILE_COMPRESS
+rescue Exception => e
+  momo_fatal_error("exception: #{e}")
 end # def backup_logfile(log_file)
 
 def backup_nosources(hTAG, srpm_only, log_file)
@@ -40,6 +43,8 @@ def backup_nosources(hTAG, srpm_only, log_file)
       end
     end
   end
+rescue Exception => e
+  momo_fatal_error("exception: #{e}")
 end
 
 =begin
@@ -62,7 +67,7 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
       pkg = srpm.split("/")[-1].split("-")[0..-3].join("-")
       Dir.glob("#{topdir}/SRPMS/#{pkg}-*src.rpm") do |s|
         if pkg == s.split("/")[-1].split("-")[0..-3].join("-") then
-          File.delete s
+          exec_command("rm -f #{s}", log_file)
         end
       end
       exec_command("cp -pfv #{srpm} #{topdir}/SRPMS", log_file)
@@ -101,7 +106,7 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
       pkg = rpm.split("/")[-1].split("-")[0..-3].join("-")
       Dir.glob("#{topdir}/{#{$ARCHITECTURE},noarch}/#{pkg}-*.{#{$ARCHITECTURE},noarch}.rpm") do |r|
         if pkg == r.split("/")[-1].split("-")[0..-3].join("-") then
-          File.delete r
+          exec_command("rm -f #{r}", log_file)
         end
       end
       current_arch = rpm.split('/')[-2]
@@ -135,4 +140,7 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
       end
     end
   end
+
+rescue Exception => e
+  momo_fatal_error("exception: #{e}")
 end

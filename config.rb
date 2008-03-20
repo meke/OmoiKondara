@@ -65,6 +65,10 @@ def parse_conf
         end
       when "LOG_FILE_COMPRESS"
         $LOG_FILE_COMPRESS = false if s.shift == 'false'
+      when "COMPRESS_CMD"
+        $COMPRESS_CMD = s.shift
+      when "CHECKSUM_MODE"
+        $CHECKSUM_MODE = s.shift
       end
     end
     return
@@ -99,6 +103,8 @@ Usage: ../tools/OmoiKondara [options] [names]
   -O, --orphan            build Orphan package, too
   -L, --alter             build Alter(alternative) package, too
   -z, --zoo               build Zoo package, too
+      --checksum "MODE"   checksum mode ("strict", "workaround", "maintainer")
+      --random            build packages in random order
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -163,10 +169,13 @@ end
   $DISPLAY            = ":0.0"
   $LOG_FILE           = "OmoiKondara.log"
   $LOG_FILE_COMPRESS  = true
+  $COMPRESS_CMD       = "bzip2 -f -9"
   $DEPEND_PACKAGE     = ""
   $MAIN_ONLY          = true
+  $CHECKSUM_MODE      = "strict"
   $BUILD_ALTER        = false
   $BUILD_ORPHAN       = false
+  $RANDOM_ORDER       = false
   $DEPGRAPH           = nil
   $RPMVERCMP        = "rpmvercmp"
   $SYSTEM_PROVIDES    = []
@@ -265,6 +274,8 @@ options = [
   ["-O", "--orphan",       GetoptLong::NO_ARGUMENT],
   ["-L", "--alter",        GetoptLong::NO_ARGUMENT],
   ["-z", "--zoo",          GetoptLong::NO_ARGUMENT],
+  ["--checksum",     GetoptLong::REQUIRED_ARGUMENT],
+  ["--random",             GetoptLong::NO_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
 
@@ -328,8 +339,12 @@ begin
       $BUILD_ALTER = true
     when "-z"
       $MAIN_ONLY = false
+    when "--checksum"
+      $CHECKSUM_MODE = ov
+    when "--random"
+      $RANDOM_ORDER = true
     when "-h"
-      show_usage
+      show_usage      
     end
   end
 rescue

@@ -184,9 +184,8 @@ def clean_up(hTAG, install, rpmopt, log_file)
   pkg = hTAG['NAME']
 
   # $DEF_RPMOPT に -bp が含まれる場合は SOURCES/* を消さないで残す(-r -bp の場合)
-  if /\-bp/ =~ $DEF_RPMOPT then
-    exec_command("rpmbuild --rcfile rpmrc #{pkg}.spec", log_file)
-  else
+  # それ以外の場合は消す
+  if not /\-bp/ =~ $DEF_RPMOPT then
     exec_command("rpmbuild --rmsource --rcfile rpmrc #{pkg}.spec", log_file)
   end
 
@@ -218,18 +217,27 @@ def clean_up(hTAG, install, rpmopt, log_file)
   if $WORKDIR then
     workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
       hTAG["VERSION"] + "-" + hTAG["RELEASE"]
-    if File.exist?("SU.PLEASE") then
-      exec_command("sudo rm -rf ./BUILD", log_file)
-      exec_command("sudo rm -rf #{workdir}", log_file)
-    else
-      exec_command("rm -rf ./BUILD", log_file)
-      exec_command("rm -rf #{workdir}", log_file)
+
+    # $WORKDIR を使っている場合は、BUILDが${workdir} にsymlinkされている
+    #
+    # $DEBUG_FLAG が non nilだとBUILDおよびworkdirを消さないで残す
+    # $DEF_RPMOPT に -bp が含まれる場合はBUILDを消さないで残す(-r -bp の場合)
+    # 以下で rm するのは、上記の否定条件時となる。
+## if ! ( $DEBUG_FLAG or /\-bp/ =~ $DEF_RPMOPT ) then # 以下と同じ
+   if ! $DEBUG_FLAG and /\-bp/ !~ $DEF_RPMOPT then
+     if File.exist?("SU.PLEASE") then
+        exec_command("sudo rm -rf ./BUILD", log_file)
+        exec_command("sudo rm -rf #{workdir}", log_file)
+      else
+        exec_command("rm -rf ./BUILD", log_file)
+        exec_command("rm -rf #{workdir}", log_file)
+      end
+      if $DEBUG_FLAG then
+        $stderr.puts "MSG: exec_command rm -rf ./BUILD"
+        $stderr.puts "MSG: exec_command rm -rf #{workdir}"
+      end
     end
-    if $DEBUG_FLAG then
-      $stderr.puts "MSG: exec_command rm -rf ./BUILD"
-      $stderr.puts "MSG: exec_command rm -rf #{workdir}"
-    end
-  end
+  end # if $WORKDIR then
 end
 
 
@@ -386,6 +394,90 @@ def prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
   end
 end
 
+# verify_sources()
+#
+# 引数 mode と返り値の関係は以下の通り
+#
+# オプション    checksumがある場合   checksumが無い場合
+# strict        不一致の場合 false   false
+# workaround    不一致の場合 false   true
+# maintainer    不一致の場合 false   true(ついでに sources を作成・更新する)
+
+def verify_sources(hTAG, log_file, mode="strict")
+
+  strict_mode = ("strict"==mode)
+  auto_append = ("maintainer"==mode)
+
+  momo_debug_log("check_sources #{hTAG['NAME']}") 
+  momo_debug_log("strict_mode:#{strict_mode} auto_append:#{auto_append}") 
+
+  srcs = Array.new
+  hTAG["NOSOURCE"].split(/[\s,]/).each { |no|
+    uri = hTAG["SOURCE#{no}"]
+    uri = hTAG["SOURCE"] if no == "0" and uri.nil?
+    if /^(ftp|https?):\/\// =~ uri then
+      srcs << uri.split(/\//)[-1]
+    end
+  }
+  hTAG["NOPATCH"].split(/[\s,]/).each { |no|
+    uri = hTAG["PATCH#{no}"]
+    uri = hTAG["PATCH"] if no == "0" and uri.nil?
+    if /^(ftp|https?):\/\// =~ uri then
+      srcs << uri.split(/\//)[-1]
+    end
+  }
+
+  sums = Hash.new
+  if File.exist?("#{hTAG['NAME']}/sources") then
+    open("#{hTAG['NAME']}/sources") { |f|
+      while l = f.gets
+        if /^([0-9abcdef]+)\s+([^\s]+)/ =~ l then
+          sums[File.basename($2)] = $1
+        end
+      end
+    }
+  end
+
+  rslt = nil
+  open("#{log_file}", "a") { |f|
+    f.sync = true
+    f.print "\n"
+    rslt = srcs.map { |s|
+      if sums.has_key?(s) then
+        # checksum を確認する
+        s_sha2 = `sha256sum #{hTAG['NAME']}/SOURCES/#{s}`.split[0]
+        f.print "compare sha256sum of #{s}: #{s_sha2} == #{sums[s]}"
+        c = (s_sha2 == sums[s])
+        if c then
+          f.print " ... YES\n"
+        else
+          f.print " ... NO\n"
+        end
+        c
+      else
+        # strict_mode が true ならエラーとする
+        if strict_mode then
+          f.print "error: #{s} has no sha256sum\n"
+          false
+        else
+          # auto_append が true なら checksum を更新する
+          f.print "warring: #{s} has no sha256sum\n"
+          if auto_append then
+            f.print "auto-adding sha256sum for #{s}\n"
+            cmd = "cd #{hTAG['NAME']}/SOURCES && sha256sum #{s} >> ../sources"
+            exec_command(cmd, log_file, true)
+          end
+          true
+        end
+      end
+    }
+  }
+  unless rslt.inject(true) { |x, y| x && y }
+    return false
+  end
+  return true
+end
+
 def prepare_sources(hTAG, log_file)
   momo_debug_log("prepare_sources #{hTAG['NAME']}")
   if !get_no(hTAG, "SOURCE", log_file) then
@@ -396,55 +488,8 @@ def prepare_sources(hTAG, log_file)
   end
   cp_to_tree(hTAG, log_file)
 
-  # compare sha256sum
-  if File.exist?("#{hTAG['NAME']}/sources") then
-    srcs = Array.new
-    hTAG["NOSOURCE"].split(/[\s,]/).each { |no|
-      uri = hTAG["SOURCE#{no}"]
-      uri = hTAG["SOURCE"] if no == "0" and uri.nil?
-      if /^(ftp|https?):\/\// =~ uri then
-        srcs << uri.split(/\//)[-1]
-      end
-    }
-    hTAG["NOPATCH"].split(/[\s,]/).each { |no|
-      uri = hTAG["PATCH#{no}"]
-      uri = hTAG["PATCH"] if no == "0" and uri.nil?
-      if /^(ftp|https?):\/\// =~ uri then
-        srcs << uri.split(/\//)[-1]
-      end
-    }
-
-    sums = Hash.new
-    open("#{hTAG['NAME']}/sources") { |f|
-      while l = f.gets
-        if /^([0-9abcdef]+)\s+([^\s]+)/ =~ l then
-          sums[File.basename($2)] = $1
-        end
-      end
-    }
-
-    rslt = nil
-    open("#{log_file}", "a") { |f|
-      f.print "\n"
-      print "\n" if $VERBOSEOUT
-      rslt = srcs.map { |s|
-        s_sha2 = `sha256sum #{hTAG['NAME']}/SOURCES/#{s}`.split[0]
-        f.print "compare sha256sum of #{s}: #{s_sha2} == #{sums[s]}"
-        print "compare sha256sum of #{s}: #{s_sha2} == #{sums[s]}" if $VERBOSEOUT
-        c = (s_sha2 == sums[s])
-        if c then
-          f.print " ... YES\n"
-          print " ... YES\n" if $VERBOSEOUT
-        else
-          f.print " ... NO\n"
-          print ": ... NO\n" if $VERBOSEOUT
-        end
-        c
-      }
-    }
-    unless rslt.inject(true) { |x, y| x && y }
-      throw :exit_buildme, MOMO_CHECKSUM
-    end
+  if !verify_sources(hTAG, log_file, $CHECKSUM_MODE) then
+    throw :exit_buildme, MOMO_CHECKSUM
   end
 end
 
@@ -452,7 +497,7 @@ def prepare_outputdirs(hTAG, log_file)
   momo_debug_log("prepare_outputdirs #{hTAG['NAME']}")
 
   topdir = get_topdir(hTAG['NAME'], "..")
-  ["SOURCES", "SRPMS", "#{$ARCHITECTURE}", "noarch"].each do |subdir|
+  ["SOURCES", "SRPMS", "#{$ARCHITECTURE}", "noarch"].each do |subdir| 
     if !File.directory?("#{topdir}/#{subdir}") then
       exec_command("mkdir -p #{topdir}/#{subdir}", log_file)
     end
@@ -593,7 +638,12 @@ end
 def recursive_build(path, name_stack, blacklist)
   pwd = Dir.pwd
   Dir.chdir path
-  `ls ./`.each_line do |pn|
+  if $RANDOM_ORDER then
+    cmd="ls ./ | shuf "
+  else
+    cmd="ls ./"
+  end  
+  `#{cmd}`.each_line do |pn|
     pn.chop!
     if File.directory?(pn) && pn != "BUILD" then
       if pn != "CVS" && pn != "." && pn != ".." &&
