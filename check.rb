@@ -202,22 +202,30 @@ def check_group(hTAG)
   end
 end
 
-#
-#
-#
+# rpm-package #{pkg} が installされた状態にする。
+# 必要な場合は #{pkg} を  build する。
+# 
+# 返値は  
+#   MOMO_SUCCESS  成功
+#   MOMO_SKIP     成功(既にinstall済)
+#   その他       エラー
 #
 def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil)  
-  momo_debug_log("build_and_install pkg:#{pkg} rpkflg:#{rpmflg} specname:#{specname}")
+  momo_debug_log("build_and_install pkg:#{pkg} rpmflg:#{rpmflg} specname:#{specname}")
 
   result = MOMO_UNDEFINED
 
   momo_assert{ pkg!="" }
 
+  # 第1段階
+  # install済のpackage or kernel関連のpackageは MOMO_SKIP とする
+
   ## !!FIXME!!  
   if (pkg =~ /^kernel\-/ &&
         pkg !~ /^kernel-(common|pcmcia-cs|doc|utils)/ ) then
     ## !!FIXME!!
-    result = MOMO_SUCCESS
+    momo_debug_log("build_and_install skips #{pkg}")
+    result = MOMO_SKIP
     return 
   end
 
@@ -233,14 +241,16 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
         break if flag
       end      
       if flag then
-        result = MOMO_SUCCESS
+        momo_debug_log("build_and_install found #{pkg} in depgraph")
+        result = MOMO_SKIP
         return 
       end
     end
   else # specname.nil?
     `rpm -q --whatprovides --queryformat "%{name}\\n" #{pkg}`
     if $?.to_i == 0 then
-      result = MOMO_FAILURE
+      momo_debug_log("build_and_install found #{pkg} using rpm -q")
+      result = MOMO_SKIP
       return
     end
   end # specname.nil?
@@ -266,7 +276,8 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     result = MOMO_FAILURE
     return
   end
-  
+
+  # 第2段階  
   # 該当パッケージをビルドする
   #
   result = buildme(specname||pkg, name_stack, blacklist) 
@@ -303,6 +314,14 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     end
   end
 
+
+  # 第3段階  
+  # build したpackageをinstallする
+  #
+  # TODO  本来なら yum install #{pkg} のようなコマンドを実行すべき
+  #       以下の実装では
+  #       1)必要以上のpackageをinstallしてしまう 2)依存関係を解決できない
+  #       という問題がある
 
   topdir = get_topdir(pkg)
 
@@ -345,6 +364,10 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
         end
       end
     end
+  else
+    # sentinel
+    momo_debug_log("pkgs is empty, pkg: #{pkg} specname=#{specname}")
+    result = MOMO_FAILURE
   end
   
   ## SUCCESS!!
@@ -352,7 +375,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
 
 ensure
   momo_assert { MOMO_UNDEFINED != result }
-  momo_debug_log("build_and_install returns #{result}")
+  momo_debug_log("build_and_install pkg:#{pkg} specname:#{specname} returns #{result}")
   return result
 end
 

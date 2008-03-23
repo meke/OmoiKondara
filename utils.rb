@@ -34,7 +34,8 @@ rescue LoadError
 end
 
 def momo_assert
-  raise "Assertion failed !" unless yield
+  #raise "Assertion failed !" unless yield
+  momo_fatal_error ("Assertion failed!") unless yield
 end
 
 def momo_debug_log(msg)
@@ -51,6 +52,9 @@ def momo_fatal_error(msg)
   STDERR.puts ""
   STDERR.puts "abort"
   STDERR.puts ""
+  STDERR.puts "please report this message to devel.ja@momonga-linux.org"
+  STDERR.puts ""
+  STDERR.puts "***********************"
   exit!(4)
 end
 

@@ -169,7 +169,10 @@ def do_rpmbuild(hTAG, log_file)
 
 ensure
   Dir.chdir ".."
+
+  momo_assert { MOMO_UNDEFINED != result }
   momo_debug_log("do_rpmbuild returns #{result}")
+
   return result
 end
 
@@ -512,10 +515,16 @@ end
 def buildme(pkg, name_stack, blacklist)
   momo_debug_log("buildme pkg:#{pkg}")
 
-  log_file = nil
   print_status(pkg) if !$VERBOSEOUT 
-  
+
+  # ビルドを開始するまでは ログを保存しない
+  log_file = nil
+    
   ret = catch(:exit_buildme) do
+    if !FileTest.directory?("#{pkg}/") then
+      throw :exit_buildme, MOMO_NO_SUCH_PACKAGE
+    end
+
     if !File.exist?("#{pkg}/#{pkg}.spec") then
       throw :exit_buildme, MOMO_NO_SUCH_PACKAGE
     end
@@ -531,8 +540,6 @@ def buildme(pkg, name_stack, blacklist)
     end
     name_stack.push(pkg)
 
-    log_file= "#{Dir.pwd}/#{pkg}/#{$LOG_FILE}"
-
     # specのタグの情報を ハッシュ hTAG に格納
     hTAG = get_specdata(pkg)
     
@@ -542,6 +549,9 @@ def buildme(pkg, name_stack, blacklist)
     end
 
     # ビルド開始
+
+    # ログの保存を開始する
+    log_file = "#{Dir.pwd}/#{pkg}/#{$LOG_FILE}"
     backup_logfile(log_file)
 
     srpm_only = is_srpm_only(pkg)
@@ -607,8 +617,6 @@ ensure
       open("#{log_file}", "a") do |fLOG|
         fLOG.puts "\n#{SUCCESS} : #{pkg}"
       end
-    when MOMO_SKIP
-    when MOMO_FAILURE      
     else
       open("#{log_file}", "a") do |fLOG|
         fLOG.puts "\n#{FAILURE} : #{pkg}"
@@ -632,6 +640,7 @@ ensure
     name_stack.pop
   end
 
+  momo_debug_log("buildme pkg:#{pkg} returns #{ret}")
   return ret
 end
 
