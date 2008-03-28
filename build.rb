@@ -145,6 +145,7 @@ def do_rpmbuild(hTAG, log_file)
   end
 
   # 後始末
+
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
   if rpmerr == 0 then
     clean_up(hTAG, install, rpmopt, log_file) if rpmopt =~ /\-ba|\-bb|\-bs|\-bp/
@@ -264,6 +265,7 @@ def is_srpm_only(pkg)
   return false
 end
 
+# package のbuildが必要な場合， MOMO_SUCCESS 返す
 def is_build_required(hTAG)
   pkg = hTAG['NAME']
   if test(?e, "#{pkg}/#{$NOTFILE}")
@@ -299,9 +301,34 @@ def is_build_required(hTAG)
            hTAG['BUILDARCH'] == "noarch")) then
     return MOMO_SKIP
   end
-
-  # *.rpm と *.spec のタイムスタンプを比較
+  
   topdir = get_topdir(hTAG['NAME'])
+  ts = File.mtime("#{pkg}/#{pkg}.spec")
+
+  # #{pkg}.spec から生成される *.rpm が無い場合 or *.rpm が古い場合は
+  # build が必要
+  spec = $DEPGRAPH.db.specs[pkg]
+  if spec then
+    found=true
+    rslt = spec.packages.each {|p|
+      file = nil
+      ["#{$ARCHITECTURE}", "noarch"].each {|arch|
+        n = "#{topdir}/#{arch}/#{p.name}-#{p.version}.#{arch}.rpm"
+        if File.exist?(n) then
+          file = n
+        end
+      }
+      if file.nil? || ts > File.mtime(file) then
+        found=false
+      end
+    }
+    if !found then
+      # buildが必要
+      return MOMO_SUCCESS
+    end
+  end
+  
+  # *.rpm と *.spec のタイムスタンプを比較
   if Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").length != 0 then
     match_srpm = ""
     Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").each do |srpms|
@@ -312,11 +339,13 @@ def is_build_required(hTAG)
       end
     end
     if !$FORCE && match_srpm != "" then
-      if File.mtime("#{pkg}/#{pkg}.spec") <= File.mtime(match_srpm)
+      if ts <= File.mtime(match_srpm)
         return MOMO_SKIP
       end
     end
   end
+
+  # buildが必要
   return MOMO_SUCCESS
 end
 
@@ -382,18 +411,21 @@ end
 
 def prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
   momo_debug_log("prepare_buildreqs #{hTAG['NAME']}")
-  rc = MOMO_SUCCESS
+
+  rc = MOMO_FAILURE
   if $NOSTRICT then
     rc = chk_requires(hTAG, name_stack, blacklist, log_file)
   else
     rc = chk_requires_strict(hTAG, name_stack, blacklist, log_file)
   end
 
-  momo_debug_log("prepare_buildreqs returns #{rc}");
-  
+ensure
+  momo_debug_log("prepare_buildreqs returns #{rc}")
   case rc
-  when MOMO_LOOP, MOMO_FAILURE
-    throw :exit_buildme, rc
+  when MOMO_SUCCESS, MOMO_SKIP
+    return true
+  else
+    return false
   end
 end
 
@@ -554,13 +586,18 @@ def buildme(pkg, name_stack, blacklist)
     log_file = "#{Dir.pwd}/#{pkg}/#{$LOG_FILE}"
     backup_logfile(log_file)
 
-    srpm_only = is_srpm_only(pkg)
     # buildreq を解析して，必要なパッケージを build & install
+    log(log_file, "prepare buildreqs")
+    srpm_only = is_srpm_only(pkg)
     if !srpm_only then
-      prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
+      ret = prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
+      if true != ret then
+        throw :exit_buildme, MOMO_BUILDREQ
+      end
     end
 
     # ビルド用ディレクトリを作り，ソースコードをダウンロード or コピー
+    log(log_file, "prepare sources")
     prepare_builddirs(hTAG, log_file)    
     prepare_sources(hTAG, log_file)    
     Dir.chdir "#{pkg}"
@@ -603,6 +640,16 @@ ensure
       print "#{NOTFOUND}"
       print NOCOLOR unless $SCRIPT
       print "\n"
+    when MOMO_BUILDREQ
+      print PURPLE unless $SCRIPT
+      print "#{BUILDREQ}"
+      print NOCOLOR unless $SCRIPT
+      print "\n"      
+    when MOMO_SIGINT
+      print PURPLE unless $SCRIPT
+      print "#{SIGINT}"
+      print NOCOLOR unless $SCRIPT
+      print "\n"      
     else
       print RED unless $SCRIPT
       print "#{FAILURE}"

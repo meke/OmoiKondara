@@ -47,7 +47,7 @@ def momo_fatal_error(msg)
   STDERR.puts "***** fatal error *****"
   STDERR.puts msg
   STDERR.puts ""
-  STDERR.puts caller.first.scan(/`(.*)'/).to_s
+  STDERR.puts caller
   STDERR.puts ""
   STDERR.puts ""
   STDERR.puts "abort"
@@ -56,6 +56,12 @@ def momo_fatal_error(msg)
   STDERR.puts ""
   STDERR.puts "***********************"
   exit!(4)
+end
+
+def log(log_file, msg)
+  open("#{log_file}", "a") do |f|
+    f.puts "#{msg}"
+  end
 end
 
 =begin

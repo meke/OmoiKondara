@@ -1,3 +1,7 @@
+
+# BuildReq: に指定されていても、無視するパッケージ
+$IGNORE_BUILDREQ_PKGS = ["rpmlib(VersionedDependencies)"]
+
 =begin
 --- chk_requires
 TAG BuildPreReq, BuildRequires 行に記述されているパッ
@@ -143,6 +147,9 @@ def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
   end
 
   brs.each do |req|
+    # 特定のパッケージは無視
+    next if $IGNORE_BUILDREQ_PKGS.include?(req.name)
+
     puts "#{name} needs #{req} installed to build:" if $VERBOSEOUT
 
     flag = false
@@ -168,13 +175,21 @@ def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
       puts "    not installed" if $VERBOSEOUT
     end
 
-    next unless $DEPGRAPH.db.packages[req.name]
+    if !$DEPGRAPH.db.packages.include?(req.name) then
+      log(log_file, "required package #{req.name} is not found, skip it")
+      next
+      # result = MOMO_FAILURE
+      # return 
+    end
+
     $DEPGRAPH.db.packages[req.name].each do |a|
       spec = $DEPGRAPH.db.specs[a.spec]
-      rc = build_and_install(req.name, '-Uvh', name_stack, blacklist, log_file, spec.name)
+      rc = build_and_install(req.name, '-Uvh', name_stack, blacklist, 
+                             log_file, spec.name)
       print_status(name) if !$VERBOSEOUT 
       case rc 
       when MOMO_LOOP, MOMO_FAILURE
+        log(log_file, "failed to build or install #{spec.name}")
         result = rc
         return
       end
@@ -182,8 +197,9 @@ def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
   end # brs.each do |req|
 
   result = MOMO_SUCCESS
+
 ensure
-  momo_assert { MOMO_UNDEFINED != result}
+  momo_assert { MOMO_UNDEFINED != result }
   return result
 end # def chk_requires_strict
 

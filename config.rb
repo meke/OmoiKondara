@@ -11,7 +11,8 @@ MOMO_OBSOLETE =  3  #  OBSOLETE
 MOMO_LOOP     =  4  #  依存関係にループがあったため失敗
 MOMO_CHECKSUM =  5  #  ファイルのチェックサムが間違っている
 MOMO_NOTFOUND =  6  #  ファイルのダウンロードに失敗した
-
+MOMO_BUILDREQ =  7  #  BuildReqしているパッケージが用意できなかった
+MOMO_SIGINT   =  8  #  sigint で中断された
 MOMO_NO_SUCH_PACKAGE = 10  # パッケージが存在しない
 MOMO_UNDEFINED  = 999 # 内部エラー状態
 
@@ -210,6 +211,8 @@ end
   OBSOLETE        = "OBSOLETE"
   CHECKSUM        = "Checksum"
   NOTFOUND        = "Notfound"
+  BUILDREQ        = "BuildReq"
+  SIGINT          = "Interrupted"
   RETRY_FTPSEARCH = 10
   DOMAIN          = ".jp"
 
