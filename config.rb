@@ -283,6 +283,8 @@ options = [
 ]
 
 
+parse_conf
+
 begin
   GetoptLong.new(*options).each do |on, ov|
     case on
@@ -354,4 +356,3 @@ rescue
   exit 1
 end
 
-parse_conf
