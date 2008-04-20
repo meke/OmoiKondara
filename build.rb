@@ -487,12 +487,14 @@ def verify_sources(hTAG, log_file, mode="strict")
           f.print " ... YES\n"
         else
           f.print " ... NO\n"
+          print "error: sha256sum of #{s} does not match\n" if $VERBOSEOUT
         end
         c
       else
         # strict_mode が true ならエラーとする
         if strict_mode then
           f.print "error: #{s} has no sha256sum\n"
+          print "error: #{s} has no sha256sum\n" if $VERBOSEOUT
           false
         else
           # auto_append が true なら checksum を更新する
