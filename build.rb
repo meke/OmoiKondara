@@ -119,6 +119,10 @@ def do_rpmbuild(hTAG, log_file)
     end
   end if !$IGNORE_REMOVE && rpmopt =~ /\-ba|\-bb/
 
+  if $GPGSIGN && rpmopt =~ /\-ba|\-bb/ then
+    rpmopt += ' --sign'
+  end
+
   install = true if $INSTALL && /^(kernel|usolame)/ !~ pkg
   
   if (File.exist? "DISPLAY.PLEASE") && !(ENV.has_key? "DISPLAY")

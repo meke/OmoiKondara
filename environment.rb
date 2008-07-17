@@ -46,6 +46,8 @@ slash('/') is for Shell scripts and Ruby scripts, respectively.
   List of URL rewriting rules.
 : ((*not available*)) / (({$MIRROR}))
   List of mirror servers for source fetching.
+: (({GPGSIGN})) / ((${GPGSIGN}))
+  Embed a GPG signature.
 Other variables will be added in the future.
 = OPTIONS
 None.
@@ -102,6 +104,8 @@ $CONF_FILES.each do |conf|
 	  $stderr.puts "WARNING: invalid workdir. use default"
 	  $WORKDIR = nil
 	end
+      when "GPGSIGN"
+        $GPGSIGN = true
       end
     end
   end
