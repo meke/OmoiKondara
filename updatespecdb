@@ -63,7 +63,7 @@ class SpecDB
   end # def commit!
 
   def initialize(verbose=false)
-    RPM.verbosity = RPM::MESS_VERBOSE
+    RPM.verbosity = RPM::LOG_INFO
 
     @names = (Dir.glob('./*').select do |dir|
                 name = File.basename(dir)
