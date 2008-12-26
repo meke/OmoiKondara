@@ -198,3 +198,12 @@ if $0 == __FILE__
   end
 end
 
+# [RPM46] check rpmbuild version
+def rpm46?
+  def rpmbuild_version(maj, min, mic)
+    return (maj<<16) + (min<<8) + mic
+  end
+  v = `LANG=C rpmbuild --version | cut -d' ' -f 3`.chomp!.split(/[\.-]/)
+  rpmbuild_version_code = rpmbuild_version(v[0].to_i, v[1].to_i, v[2].to_i)
+  return rpmbuild_version(4, 6, 0) <= rpmbuild_version_code
+end
