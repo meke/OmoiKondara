@@ -2,11 +2,26 @@
 #
 #
 
+require 'environment'
 require 'dependency'
 require 'expandmacro'
 require 'check'
 require 'getsource'
 require 'backup'
+
+# [RPM46] rpmbuild に渡す --macros オプションを生成する。
+def generate_macrofiles(path)
+  '--macros=' \
+  '/usr/lib/rpm/macros:' \
+  '/usr/lib/rpm/macros.momonga:' \
+  '/usr/lib/rpm/platform/%{_target}/macros:' \
+  '/usr/lib/rpm/momonga/macros:' \
+  '/etc/rpm/macros.*:' \
+  '/etc/rpm/macros:' \
+  '/etc/rpm/%{_target}/macros:' \
+  '~/.rpmmacros:' \
+  "#{path}/rpmmacros "
+end
 
 # カレントディレクトリに rpmrc を生成する
 #
@@ -41,6 +56,9 @@ def generate_rpmrc(path)
     `echo '%{nil}' >> rpmmacros`
   else
     `echo %OmoiKondara_enable_debug 0 >> rpmmacros`
+  end
+  if rpm46? then
+    `echo '%buildroot %{_tmppath}/%{name}-%{version}-%{release}-root-%(id -un)' >> rpmmacros`
   end
 end
 
@@ -135,7 +153,7 @@ def do_rpmbuild(hTAG, log_file)
 
   # rpmbuild の実行
   rpmerr = nil
-  cmd = "rpmbuild --rcfile rpmrc #{rpmopt} #{pkg}.spec"
+  cmd = "rpmbuild --rcfile rpmrc #{generate_macrofiles(Dir.pwd) if rpm46?}#{rpmopt} #{pkg}.spec"
   if File.exist?("SU.PLEASE") then
     rpmerr = exec_command("#{lang}sudo #{cmd}", log_file, need_timeout)
   else
@@ -194,7 +212,7 @@ def clean_up(hTAG, install, rpmopt, log_file)
   # $DEF_RPMOPT に -bp が含まれる場合は SOURCES/* を消さないで残す(-r -bp の場合)
   # それ以外の場合は消す
   if not /\-bp/ =~ $DEF_RPMOPT then
-    exec_command("rpmbuild --rmsource --rcfile rpmrc #{pkg}.spec", log_file)
+    exec_command("rpmbuild --rmsource --rcfile rpmrc #{generate_macrofiles(Dir.pwd) if rpm46?}#{pkg}.spec", log_file)
   end
 
   File.delete "rpmrc"
@@ -203,22 +221,46 @@ def clean_up(hTAG, install, rpmopt, log_file)
   # $DEBUG_FLAG が non nilだとBUILDを消さないで残す
   if $DEBUG_FLAG then
     if File.exist?("SU.PLEASE") then
-      exec_command("sudo rm -rf SOURCES RPMS SRPMS", log_file)
+      if rpm46? then
+        exec_command("sudo rm -rf SOURCES RPMS SRPMS SPECS BUILDROOT", log_file)
+      else
+        exec_command("sudo rm -rf SOURCES RPMS SRPMS", log_file)
+      end
     else
-      exec_command("rm -rf SOURCES RPMS SRPMS", log_file)
+      if rpm46? then
+        exec_command("rm -rf SOURCES RPMS SRPMS SPECS BUILDROOT", log_file)
+      else
+        exec_command("rm -rf SOURCES RPMS SRPMS", log_file)
+      end
     end
   # $DEF_RPMOPT に -bp が含まれる場合はBUILD/SOURCESを消さないで残す(-r -bp の場合)
   elsif /\-bp/ =~ $DEF_RPMOPT then
     if File.exist?("SU.PLEASE") then
-      exec_command("sudo rm -rf RPMS SRPMS", log_file)
+      if rpm46? then
+        exec_command("sudo rm -rf RPMS SRPMS SPECS BUILDROOT", log_file)
+      else
+        exec_command("sudo rm -rf RPMS SRPMS", log_file)
+      end
     else
-      exec_command("rm -rf RPMS SRPMS", log_file)
+      if rpm46? then
+        exec_command("rm -rf RPMS SRPMS SPECS BUILDROOT", log_file)
+      else
+        exec_command("rm -rf RPMS SRPMS", log_file)
+      end
     end
   else
     if File.exist?("SU.PLEASE") then
-      exec_command("sudo rm -rf SOURCES RPMS SRPMS BUILD ", log_file)
+      if rpm46? then
+        exec_command("sudo rm -rf SOURCES RPMS SRPMS BUILD SPECS BUILDROOT", log_file)
+      else
+        exec_command("sudo rm -rf SOURCES RPMS SRPMS BUILD", log_file)
+      end
     else
-      exec_command("rm -rf SOURCES RPMS SRPMS BUILD ", log_file)
+      if rpm46? then
+        exec_command("rm -rf SOURCES RPMS SRPMS BUILD SPECS BUILDROOT", log_file)
+      else
+        exec_command("rm -rf SOURCES RPMS SRPMS BUILD", log_file)
+      end
     end
   end
 
