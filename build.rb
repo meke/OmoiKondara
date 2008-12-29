@@ -10,6 +10,10 @@ require 'getsource'
 require 'backup'
 
 # [RPM46] rpmbuild に渡す --macros オプションを生成する。
+# rpmbuild に --macros オプションを渡すと、それの引数で
+# rpm-4.6.0-rc3/lib/rpmrc.c の macrofiles が上書きされる。
+# 文字列に含まれる %{_target} などのマクロや * と ~ はちゃんと展開される。
+# ただし、マクロは上記の rpmrc.c で定義されているものに限られると思う。
 def generate_macrofiles(path)
   '--macros=' \
   '/usr/lib/rpm/macros:' \
