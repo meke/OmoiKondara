@@ -97,7 +97,7 @@ def do_rpmbuild(hTAG, log_file)
       end
     else
       if ENV['LD_PRELOAD'] !~ /cachecc1\.so/ && `rpm -q cachecc1 2>/dev/null` =~ /^cachecc1/ then
-        ENV['LD_PRELOAD'] = "/usr/lib/cachecc1.so #{ENV['LD_PRELOAD']}"
+        ENV['LD_PRELOAD'] =  `rpm --eval \'%{_libdir}\'`.chomp! + "/cachecc1.so #{ENV['LD_PRELOAD']}"
       end
       if !ENV['CACHECC1_DIR'] then
         ENV['CACHECC1_DIR'] = "#{ENV['HOME']}/.cachecc1"
