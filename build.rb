@@ -27,16 +27,93 @@ def generate_macrofiles(path)
   "#{path}/rpmmacros "
 end
 
+# rpmrcファイルの雛型 basefile を元に
+# 新しいrpmrcファイル newfile を作成する
+#
+# 第三引数で設定ファイル(OPTFLAGS)が指定された場合は
+# 設定ファイルの内容に従って newfile中のoptflags: 行を置換する
+#
+# 設定ファイル(OPTFLAGS)の書式は以下の通り
+# - 置換ルール("pattern" と "replacement" の対)を一行づつ記述
+# - 複数の置換ルールを記述した場合は、先頭から順番に置換処理を行う  
+# - 先頭文字が"#"で始まる行(コメント行)、及び空行は無視する
+#
+# 設定ファイルの記述例は以下の通り
+# 置換する場合)
+#    -O3  -O2
+#    -O3  "-O2 -ftree-vectorize"
+# 削除する場合)
+#     -O3  ""
+#     "-mtune=[^ ]*"   ""
+# 追加する場合)
+#     $    " -Wall"
+#     ^    "-Wall"
+
+def copy_rpmrc(basefile, newfile, optfile = nil)
+  pats = []
+  if !optfile.nil?
+    File.open(optfile).each { |line|
+      line.chomp!
+      
+      token = line.scan(/\"[^\"]*\"|[^\" \t]+/)
+      
+      next if 0 == token.size
+      next if "#" == token[0]
+      
+      if 2 != token.size
+        abort "format error in #{optfile}, line #{line}"
+        throw :exit_buildme, MOMO_FAILURE
+        next
+      end    
+      
+      token.each {|s|
+        s.gsub!(/^\"(.*)\"$/, "\\1")
+      }   
+      
+      pats.push(token)
+    }
+  end
+
+
+  newf = File.open(newfile, 'w')
+
+  File.open(basefile, 'r').each { |line|
+    # macrofiles: 〜 の行は削除する
+    next if line[0,10] == "macrofiles"
+    
+    # 設定ファイル OPTFLAGS の内容に従って、 optflags: 〜の行を編集
+    if pats.size and line[0,9] == "optflags:"
+      str = line[10..-1]
+      str.chomp!
+      pats.each { |pattern,replace|
+        str.gsub!(/#{pattern}/, replace)
+      }
+      newf.print "optflags: ", str, "\n"
+    else
+      newf.print line
+    end
+  }
+
+  newf.close
+end
+
 # カレントディレクトリに rpmrc を生成する
 #
 # !!FIXME!!  現状では path== Dir.pwd の場合しか動作しないと思われる
 #
 def generate_rpmrc(path)
-  if $DEBUG_FLAG then
-    `grep -v macrofiles ../rpmrc.debug > rpmrc`
+  if $DEBUG_FLAG 
+    basefile = "../rpmrc.debug"
   else
-    `grep -v macrofiles ../rpmrc > rpmrc`
+    basefile = "../rpmrc"
   end
+  if File.exist?("OPTFLAGS")
+    optfile = 'OPTFLAGS'
+  else
+    optfile = nil 
+  end
+  copy_rpmrc(basefile, 'rpmrc', optfile)
+
   macrofiles = `grep macrofiles ../rpmrc`.chop
   `echo #{macrofiles}#{path}/rpmmacros >> rpmrc`
   `echo %_topdir #{path} > rpmmacros`
