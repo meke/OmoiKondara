@@ -1,37 +1,37 @@
 ############ Sub functions ############
 
-begin
-  require 'rpmmodule'
-  $CANNOTSTRICT = false
-
-  module RPM
-    class Version
-      alias_method :cmp, '<=>'
-      def <=>(other)
-        rv = 0
-        if self.e then
-          if other.e.nil? then
-            rv = 1
-          else
-            rv = self.e <=> other.e
-            if rv == 0 then
-              rv = cmp(other)
-            end
-          end
-        else # self.e.nil?
-          if other.e then
-            rv = -1
-          else
-            rv = cmp(other)
-          end
-        end
-        rv
-      end # def <=>(other)
-    end # class Version
-  end # module RPM
-rescue LoadError
-  $CANNOTSTRICT = true
-end
+#begin
+#  require 'rpmmodule'
+#  $CANNOTSTRICT = false
+#
+#  module RPM
+#    class Version
+#      alias_method :cmp, '<=>'
+#      def <=>(other)
+#        rv = 0
+#        if self.e then
+#          if other.e.nil? then
+#            rv = 1
+#          else
+#            rv = self.e <=> other.e
+#            if rv == 0 then
+#              rv = cmp(other)
+#            end
+#          end
+#        else # self.e.nil?
+#          if other.e then
+#            rv = -1
+#          else
+#            rv = cmp(other)
+#          end
+#        end
+#        rv
+#      end # def <=>(other)
+#    end # class Version
+#  end # module RPM
+#rescue LoadError
+#  $CANNOTSTRICT = true
+#end
 
 def momo_assert
   #raise "Assertion failed !" unless yield
