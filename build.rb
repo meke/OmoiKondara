@@ -533,7 +533,7 @@ def prepare_builddirs(hTAG, log_file)
     prepare_dirs(hTAG, ["BUILD"])
   end
 
-  prepare_dirs(hTAG,["SOURCES", "RPMS/#{$ARCHITECTURE}", "RPMS/noarch", "SRPMS"])
+  prepare_dirs(hTAG, if rpm46? then ["SOURCES"] else ["SOURCES", "RPMS/#{$ARCHITECTURE}", "RPMS/noarch", "SRPMS"] end)
 end
 
 def prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
