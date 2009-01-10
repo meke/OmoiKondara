@@ -2,6 +2,154 @@
 # BuildReq: に指定されていても、無視するパッケージ
 $IGNORE_BUILDREQ_PKGS = ["rpmlib(VersionedDependencies)"]
 
+# pkgをprovideしている*.rpmを探す
+#
+# TODO いまのところ、 Provides: には対応できていない
+#     対処案としては ../tools/abc/ruby/find-provides.rb  #{pkg} のような処理に差し替える
+#
+def search_rpm_files(pkg)
+  # pkg名から、ファイル名を推測
+  topdir = get_topdir(pkg)
+  files = Dir.glob("#{topdir}*/{#{$ARCHITECTURE},noarch}/#{pkg}-*.rpm") 
+  files.delete_if {|f| pkg!=File.basename(f).split("-")[0..-3].join("-") }
+ 
+  # TODO   以下 未実装 
+  #  if files.empty? then
+  #    # #{pkg}を provideしているpackageを探す  
+  #
+  #  end
+  
+  if files.empty? then
+    momo_debug_log("warning: search_rpm_files(#{pkg}) founds no file")
+  elsif files.size > 1 then
+    momo_debug_log("warning: search_rpm_files(#{pkg}) founds #{files.size} files; #{files.join(' ')} ")
+  end
+  return files
+end
+
+# パッケージ pkg をinstallする
+# - 依存関係が解決できない場合は 再帰的にbuild_and_installを呼び出す
+# - installに成功した場合は、 $SYSTEM_PROVIDES を更新する
+#
+#
+# TODO   ../tools/update-yum && sudo yum install #{pkg}  に差し替える？
+#
+#       当実装には以下の問題がある
+#        -   provides:で提供された仮想package(?)等を解決できない
+#        -   バージョンの確認がない
+#
+
+def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
+  result = MOMO_FAILURE
+
+  files = search_rpm_files(pkg)
+  if files.empty? then
+    return
+  end
+
+  # filesに登録されているpackage達をinstallする
+  # installに失敗した場合は、最大 retrycounter回試行する
+  while retrycounter > 0 do
+    retrycounter = retrycounter - 1 
+
+    files.uniq!
+
+    # 依存関係を確認
+    # 不足packageを missing に追加
+    cmd="env LANG=C rpm -U --test #{files.join(' ')}"
+    missing = []
+    found = 0
+    ret = `#{cmd} 2>&1`.split("\n").each do |line|
+      if / is needed by / =~ line  then
+        missing.push( line.split(' ')[0] )
+      elsif / is already installed/ =~ line then
+        # すでに install ずみ
+        momo_debug_log("#{pkg} is already installed")
+        found = found + 1
+      end
+    end
+    
+    # すべてinstallずみの場合 skip
+    if files.size == found then
+      result = MOMO_SKIP
+      return
+    end
+
+    # 依存関係が解決できた場合は install
+    if missing.empty? then
+      cmd="env LANG=C sudo rpm -Uvh --force #{files.join(' ')}"
+      ret = exec_command("#{cmd}", log_file)
+
+      # 成功時
+      break if 0 == ret
+
+      # 失敗時
+      momo_debug_log("install failed")
+      return
+
+    else
+      # 依存関係を解決
+      missing.each do |p|
+        f = search_rpm_files(p)
+
+        if f.empty? then
+          rc = build_and_install(p, "-Uvh", name_stack, blacklist, log_file)
+          case rc
+            when MOMO_LOOP, MOMO_FAILURE
+            momo_debug_log("failed to resolve #{p}")
+            return rc
+          end
+        else
+          # TODO   以下未実装
+          # f.each do |sub|
+          #  if (sub のバージョンが古ければ) then
+          #       build_and_install(sub) 
+          #  else
+          #       files += sub
+          #  end
+          # end 
+          files += f
+        end
+      end
+    end
+
+  end 
+
+  if retrycounter == 0 then
+    momo_debug_log("failed to solve dependencies in #{files.join(' ')}")
+    return 
+  end
+
+  if not $CANNOTSTRICT then
+    files.each do |a|
+      begin
+        rpmpkg = RPM::Package.open(a)
+        rpmpkg.provides.each do |prov|
+          if not $SYSTEM_PROVIDES.has_name?(prov.name) then
+            $SYSTEM_PROVIDES.push(prov)
+          end
+        end
+      ensure
+        rpmpkg = nil
+        GC.start
+      end
+    end
+  end
+
+  result = MOMO_SUCCESS
+  return 
+
+ensure
+  case result
+  when MOMO_SUCCESS, MOMO_SKIP
+    result = MOMO_SUCCESS
+  else
+    result = MOMO_FAILURE
+    momo_debug_log("install_pkg(#{pkg}) failed")
+  end
+  return result
+end
+
 =begin
 --- chk_requires
 TAG BuildPreReq, BuildRequires 行に記述されているパッ
@@ -246,6 +394,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
   end
 
   if specname then
+    # すでにinstall済なら SKIP
     if $SYSTEM_PROVIDES.has_name?(pkg) then
       provs = $SYSTEM_PROVIDES.select{|a| a.name == pkg}
       req = SpecDB::DependencyData.new(pkg,
@@ -263,6 +412,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
       end
     end
   else # specname.nil?
+    # すでにinstall済なら SKIP
     `rpm -q --whatprovides --queryformat "%{name}\\n" #{pkg}`
     if $?.to_i == 0 then
       momo_debug_log("build_and_install found #{pkg} using rpm -q")
@@ -271,6 +421,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     end
   end # specname.nil?
 
+  # "OBSOLETE" 等の設定ファイルがあれば SKIP
   if !File.directory?(specname||pkg) then
     `grep -i ^provides: */*.spec | grep #{specname||pkg}`.each_line do |l|
       prov = l.split(/\//)[0]
@@ -288,6 +439,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
   #    if `grep -i '^BuildArch:.*noarch' #{specname||pkg}/#{specname||pkg}.spec` != ""
   #      return
   #    end
+
   if !$NONFREE && File.exist?("#{specname||pkg}/TO.Nonfree")
     result = MOMO_FAILURE
     return
@@ -304,91 +456,12 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     return 
   end
 
-  pkgs = []
-  if specname and $DEPGRAPH then
-    spec = $DEPGRAPH.db.specs[specname]
-    pkg2 = spec.packages.select{|a| a.name == pkg}[0]
-    if pkg2 then
-      pkg2.requires.each do |req|
-        if not $SYSTEM_PROVIDES.has_name?(req.name) then
-          if $DEPGRAPH.db.packages[req.name] then
-            $DEPGRAPH.db.packages[req.name].each do |a|
-              result = build_and_install(a.spec, rpmflg, 
-                                         name_stack, blacklist, log_file)
-              print_status(pkg) if !$VERBOSEOUT 
-              case result 
-              when MOMO_LOOP, MOMO_FAILURE 
-                return
-              else
-                result = MOMO_UNDEFINED
-              end              
-            end
-          end
-        end
-      end
-      pkg = pkg2.name
-    end
-  end
-
-
   # 第3段階  
-  # build したpackageをinstallする
-  #
-  # TODO  本来なら yum install #{pkg} のようなコマンドを実行すべき
-  #       以下の実装では
-  #       1)必要以上のpackageをinstallしてしまう 2)依存関係を解決できない
-  #       という問題がある
+  # #{pkg}をinstallする
 
-  topdir = get_topdir(pkg)
-
-  pkgs = Dir.glob("#{topdir}/#{$ARCHITECTURE}/#{pkg}-*.rpm")
-  pkgs += Dir.glob("#{topdir}/noarch/#{pkg}-*.rpm")
-
-  if /-devel/ =~ pkg then
-    mainpkg = pkg.sub( /-devel/, '' )
-    pkgs += Dir.glob("#{topdir}/#{$ARCHITECTURE}/#{mainpkg}-*.rpm")
-    pkgs += Dir.glob("#{topdir}/noarch/#{mainpkg}-*.rpm")
-  end
-
-  if not pkgs.empty? then
-    pkgs.uniq!
-    cmd="rpm #{rpmflg} --force --test #{pkgs.join(' ')}"
-    ret = exec_command("#{cmd}", log_file)
-    if 0 != ret then
-      result = MOMO_FAILURE
-      return
-    end
-    cmd="rpm #{rpmflg} --force #{pkgs.join(' ')}"
-    ret = exec_command("sudo #{cmd}", log_file)
-    if 0 != ret then
-      result = MOMO_FAILURE
-      return
-    end
-
-    if not $CANNOTSTRICT then
-      pkgs.each do |a|
-        begin
-          rpmpkg = RPM::Package.open(a)
-          rpmpkg.provides.each do |prov|
-            if not $SYSTEM_PROVIDES.has_name?(prov.name) then
-              $SYSTEM_PROVIDES.push(prov)
-            end
-          end
-        ensure
-          rpmpkg = nil
-          GC.start
-        end
-      end
-    end
-  else
-    # sentinel
-    momo_debug_log("pkgs is empty, pkg: #{pkg} specname=#{specname}")
-    result = MOMO_FAILURE
-  end
+  retrycounter = 3
+  result = install_pkg(pkg, name_stack, blacklist, log_file, retrycounter)
   
-  ## SUCCESS!!
-  result = MOMO_SUCCESS
-
 ensure
   momo_assert { MOMO_UNDEFINED != result }
   momo_debug_log("build_and_install pkg:#{pkg} specname:#{specname} returns #{result}")
