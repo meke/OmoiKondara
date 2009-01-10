@@ -33,11 +33,6 @@
 #  $CANNOTSTRICT = true
 #end
 
-def momo_assert
-  #raise "Assertion failed !" unless yield
-  momo_fatal_error ("Assertion failed!") unless yield
-end
-
 def momo_debug_log(msg)
   STDERR.puts msg if $DEBUG_FLAG
 end
@@ -56,6 +51,11 @@ def momo_fatal_error(msg)
   STDERR.puts ""
   STDERR.puts "***********************"
   exit!(4)
+end
+
+def momo_assert
+  #raise "Assertion failed !" unless yield
+  momo_fatal_error("Assertion failed!") unless yield
 end
 
 def log(log_file, msg)
@@ -129,7 +129,7 @@ getsするが、sec秒以内に終了しない場合にはTimeoutErrorをraise�
 class IO
   def gets_with_timeout (sec)
     r = ''
-    timeout (sec) do
+    timeout(sec) do
       r = gets
     end
     r
