@@ -432,30 +432,40 @@ def is_build_required(hTAG)
   topdir = get_topdir(hTAG['NAME'])
   ts = File.mtime("#{pkg}/#{pkg}.spec")
 
-  # #{pkg}.spec から生成される *.rpm が無い場合 or *.rpm が古い場合は
-  # build が必要
+  # build済の *.rpm が存在するか確認する
+  #
+  # *.rpm がすでに生成済の場合でも、 以下の場合には rebuild が必要となる
+  #
+  # - #{pkg}.spec から生成される *.rpm が無い場合
+  # - *.rpm が #{pkg}.specよりも古い場合
+  # - *.rpm が *.src.rpm よりも古い場合
   spec = $DEPGRAPH.db.specs[pkg]
   if spec then
-    found=true
-    rslt = spec.packages.each {|p|
-      file = nil
+    spec.packages.each {|p|
+      built = false
+      found = false
       ["#{$ARCHITECTURE}", "noarch"].each {|arch|
-        n = "#{topdir}/#{arch}/#{p.name}-#{p.version}.#{arch}.rpm"
-        if File.exist?(n) then
-          file = n
-        end
+        Dir.glob("#{topdir}/#{arch}/#{p.name}-*.rpm").each {|f|
+          if p.name == File.basename(f).split("-")[0..-3].join("-") then
+            found = true
+            if ts < File.mtime(f) then
+              built = true
+            end
+          end
+        }
       }
-      if file.nil? || ts > File.mtime(file) then
-        found=false
+      if !found then
+        momo_debug_log("#{p.name}-*.rpm is not found")
+        return MOMO_SUCCESS
+      end
+      if !built then
+        momo_debug_log("#{topdir}/*/#{p.name}-*.rpm is old")
+        return MOMO_SUCCESS
       end
     }
-    if !found then
-      # buildが必要
-      return MOMO_SUCCESS
-    end
   end
-  
-  # *.rpm と *.spec のタイムスタンプを比較
+
+  # *.rpm と *.src.rpm のタイムスタンプを比較
   if Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").length != 0 then
     match_srpm = ""
     Dir.glob("#{topdir}/SRPMS/#{pkg}-*.rpm").each do |srpms|
@@ -703,6 +713,7 @@ def buildme(pkg, name_stack, blacklist)
 
     # specのタグの情報を ハッシュ hTAG に格納
     hTAG = get_specdata(pkg)
+
     
     ret = is_build_required(hTAG)
     if MOMO_SUCCESS != ret then
