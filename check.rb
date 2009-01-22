@@ -44,6 +44,7 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
 
   files = search_rpm_files(pkg)
   if files.empty? then
+    log(log_file, "there is no rpm package providing #{pkg}")
     return
   end
 
@@ -60,12 +61,12 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
     missing = []
     found = 0
     ret = `#{cmd} 2>&1`.split("\n").each do |line|
-      if / is needed by / =~ line  then
-        missing.push( line.split(' ')[0] )
-      elsif / is already installed/ =~ line then
-        # すでに install ずみ
-        momo_debug_log("#{pkg} is already installed")
+      if / is already installed/ =~ line then
         found = found + 1
+      elsif / is needed by \(installed\) / =~ line  then
+        missing.push( line.split(' ')[-1].split('-')[0..-3].join('-') )
+      elsif / is needed by / =~ line then
+        missing.push( line.split(' ')[0] )
       end
     end
     
@@ -84,7 +85,6 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
       break if 0 == ret
 
       # 失敗時
-      momo_debug_log("install failed")
       return
 
     else
@@ -96,7 +96,10 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
           rc = build_and_install(p, "-Uvh", name_stack, blacklist, log_file)
           case rc
             when MOMO_LOOP, MOMO_FAILURE
-            momo_debug_log("failed to resolve #{p}")
+            log(log_file, "failed to rebuild #{p}")
+            return rc
+            when MOMO_NO_SUCH_PACKAGE
+            log(log_file, "could not find the package which provides #{p}")
             return rc
           end
         else
@@ -116,7 +119,15 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
   end 
 
   if retrycounter == 0 then
-    momo_debug_log("failed to solve dependencies in #{files.join(' ')}")
+    cmd="env LANG=C rpm -U --test #{files.join(' ')}"
+    ret=`#{cmd} 2>&1`
+    open("#{log_file}", "a") { |f|
+      f.puts "failed to solve dependencies, check the following messages for more information"
+      f.puts ""
+      f.puts "#{cmd}"
+      f.puts "#{ret}"
+      f.puts ""
+    }
     return 
   end
 
@@ -178,7 +189,7 @@ def chk_requires(hTAG, name_stack, blacklist, log_file)
     next  if r =~ /\//
 
     # インストール済の場合 ir = <epoch>:<ver>-<rel>
-    ir = `rpm -q --queryformat '%{EPOCH}:%{VERSION}-%{RELEASE}' #{r} 2>/dev/null`.split(':')
+    ir = `rpm -q --queryformat '%{EPOCH}:%{VERSION}-%{RELEASE}' "#{r}" 2>/dev/null`.split(':')
     r = r.split(/\-/)[0..-2].join("-") if r =~ /\-devel/
 
     if ir.length != 2 then
@@ -413,7 +424,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     end
   else # specname.nil?
     # すでにinstall済なら SKIP
-    `rpm -q --whatprovides --queryformat "%{name}\\n" #{pkg}`
+    `rpm -q --whatprovides --queryformat "%{name}\\n" "#{pkg}"`
     if $?.to_i == 0 then
       momo_debug_log("build_and_install found #{pkg} using rpm -q")
       result = MOMO_SKIP
@@ -421,10 +432,11 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
     end
   end # specname.nil?
 
-  # "OBSOLETE" 等の設定ファイルがあれば SKIP
+  # specname (または pkg )を provide しているパッケージを探索
   if !File.directory?(specname||pkg) then
-    `grep -i ^provides: */*.spec | grep #{specname||pkg}`.each_line do |l|
+    `grep -i ^provides: */*.spec | grep "#{specname||pkg}"`.each_line do |l|
       prov = l.split(/\//)[0]
+      # "OBSOLETE" 等の設定ファイルがあれば SKIP
       if File.exist?("#{prov}/#{prov}.spec") and
           Dir.glob("#{prov}/TO.*") == [] and
           !File.exist?("#{prov}/OBSOLETE") and
@@ -459,7 +471,7 @@ def build_and_install(pkg, rpmflg, name_stack, blacklist, log_file, specname=nil
   # 第3段階  
   # #{pkg}をinstallする
 
-  retrycounter = 3
+  retrycounter = 10
   result = install_pkg(pkg, name_stack, blacklist, log_file, retrycounter)
   
 ensure
