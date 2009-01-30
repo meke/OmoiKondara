@@ -83,12 +83,13 @@ def copy_rpmrc(basefile, newfile, optfile = nil)
     
     # 設定ファイル OPTFLAGS の内容に従って、 optflags: 〜の行を編集
     if pats.size and line[0,9] == "optflags:"
-      str = line[10..-1]
-      str.chomp!
+      col = line.split(' ')
+      str = col[2..-1].join(' ')
       pats.each { |pattern,replace|
         str.gsub!(/#{pattern}/, replace)
       }
-      newf.print "optflags: ", str, "\n"
+      line = col[0..1].join(' ') + ' ' + str + "\n"
+      newf.print line
     else
       newf.print line
     end
