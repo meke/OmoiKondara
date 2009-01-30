@@ -2,27 +2,49 @@
 # BuildReq: に指定されていても、無視するパッケージ
 $IGNORE_BUILDREQ_PKGS = ["rpmlib(VersionedDependencies)"]
 
-# pkgをprovideしている*.rpmを探す
+# prov をprovideしている*.rpmを探す
 #
-# TODO いまのところ、 Provides: には対応できていない
-#     対処案としては ../tools/abc/ruby/find-provides.rb  #{pkg} のような処理に差し替える
+# TODO 現実装は暫定的なものであり、
+#      処理が遅く、対応する*.rpm を発見できない場合がある。
 #
-def search_rpm_files(pkg)
-  # pkg名から、ファイル名を推測
-  topdir = get_topdir(pkg)
-  files = Dir.glob("#{topdir}*/{#{$ARCHITECTURE},noarch}/#{pkg}-*.rpm") 
-  files.delete_if {|f| pkg!=File.basename(f).split("-")[0..-3].join("-") }
+def search_rpm_files(prov)
+  # 1) provをpkg名とみなし、ファイル名を推測
+  topdir = get_topdir(prov)
+  files = Dir.glob("#{topdir}*/{#{$ARCHITECTURE},noarch}/#{prov}-*.rpm") 
+  files.delete_if {|f| prov!=File.basename(f).split("-")[0..-3].join("-") }
  
-  # TODO   以下 未実装 
-  #  if files.empty? then
-  #    # #{pkg}を provideしているpackageを探す  
-  #
-  #  end
+  if files.empty? then
+    # 2) #{prov} を provide してそうなファイルの中から
+    #     実際に provide しているものを探す
+    
+    topdir = File.expand_path $TOPDIR
+
+    # #{prov}を実際にprovideしてそうなファイル名のパターンを生成
+    pattern = "#{prov}"
+    pattern.gsub!(/^pkgconfig\((.+)\)$/, '\1')
+    pattern.gsub!(/\.so.*$/,'')
+    pattern.gsub!(/^lib/,'')
+    pattern.gsub!(/-[0-9.-]+$/,'')
+    pattern.gsub!(/[0-9]+$/,'')
+    pattern.downcase!
+
+    `find #{topdir}*/{#{$ARCHITECTURE},noarch} -iname "*#{pattern}*.rpm"`.each_line {|f|
+      f.chomp!
+      `rpm -qp --provides #{f}`.each_line {|p|
+        if prov==p.split(' ')[0] then
+          files.push(f)
+          break
+        end
+      }
+    }
+  end
   
   if files.empty? then
-    momo_debug_log("warning: search_rpm_files(#{pkg}) founds no file")
+    momo_debug_log("warning: search_rpm_files(#{prov}) founds no file")
   elsif files.size > 1 then
-    momo_debug_log("warning: search_rpm_files(#{pkg}) founds #{files.size} files; #{files.join(' ')} ")
+    momo_debug_log("warning: search_rpm_files(#{prov}) founds #{files.size} files; #{files.join(' ')} ")
+  else 
+    momo_debug_log("search_rpm_files(#{prov}) returns #{files.join(' ')}")
   end
   return files
 end
@@ -41,6 +63,7 @@ end
 
 def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
   result = MOMO_FAILURE
+  momo_debug_log("install_pkg(#{pkg})")
 
   files = search_rpm_files(pkg)
   if files.empty? then
@@ -102,6 +125,9 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
             log(log_file, "could not find the package which provides #{p}")
             return rc
           end
+
+          # 依存関係を一つ解決したので、再度依存関係の確認処理に戻る
+          break
         else
           # TODO   以下未実装
           # f.each do |sub|
@@ -111,7 +137,10 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
           #       files += sub
           #  end
           # end 
+
+          # 依存関係を一つ解決したので、再度依存関係の確認処理に戻る
           files += f
+          break
         end
       end
     end
