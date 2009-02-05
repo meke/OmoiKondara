@@ -26,6 +26,12 @@ def search_rpm_files(prov)
     pattern.gsub!(/^lib/,'')
     pattern.gsub!(/-[0-9.-]+$/,'')
     pattern.gsub!(/[0-9]+$/,'')
+    # perl(hoge::fuga) =>  perl-hoge-fuga
+    if pattern =~ /^perl\(.*\)$/ then
+      pattern.gsub!(/\(/,'-')
+      pattern.gsub!(/\)/,'-')
+      pattern.gsub!(/::/,'-')
+    end
     pattern.downcase!
 
     `find #{topdir}*/{#{$ARCHITECTURE},noarch} -iname "*#{pattern}*.rpm"`.each_line {|f|
