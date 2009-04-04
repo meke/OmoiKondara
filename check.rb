@@ -10,7 +10,11 @@ $IGNORE_BUILDREQ_PKGS = ["rpmlib(VersionedDependencies)"]
 def search_rpm_files(prov)
   # 1) provをpkg名とみなし、ファイル名を推測
   topdir = get_topdir(prov)
-  files = Dir.glob("#{topdir}*/{#{$ARCHITECTURE},noarch}/#{prov}-*.rpm") 
+  if $STORE then
+    files = Dir.glob("#{topdir}*/#{$STORE}/#{prov}-*.rpm") 
+  else
+    files = Dir.glob("#{topdir}*/{#{$ARCHITECTURE},noarch}/#{prov}-*.rpm") 
+  end
   files.delete_if {|f| prov!=File.basename(f).split("-")[0..-3].join("-") }
  
   if files.empty? then
@@ -34,7 +38,12 @@ def search_rpm_files(prov)
     end
     pattern.downcase!
 
-    `find #{topdir}*/{#{$ARCHITECTURE},noarch} -iname "*#{pattern}*.rpm"`.each_line {|f|
+    find_result = if $STORE
+                    `find #{topdir}*/#{$STORE} -iname "*#{pattern}*.rpm"`
+                  else
+                    `find #{topdir}*/{#{$ARCHITECTURE},noarch} -iname "*#{pattern}*.rpm"`
+                  end
+    find_result.each_line {|f|
       f.chomp!
       `rpm -qp --provides #{f}`.each_line {|p|
         if prov==p.split(' ')[0] then

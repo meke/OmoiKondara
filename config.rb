@@ -70,6 +70,8 @@ def parse_conf
         $COMPRESS_CMD = s.shift
       when "CHECKSUM_MODE"
         $CHECKSUM_MODE = s.shift
+      when "STORE"
+        $STORE = s.shift
       end
     end
     return

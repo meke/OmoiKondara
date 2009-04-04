@@ -78,10 +78,10 @@ def copy_rpmrc(basefile, newfile, optfile = nil)
   newf = File.open(newfile, 'w')
 
   File.open(basefile, 'r').each { |line|
-    # macrofiles: 〜 の行は削除する
+    # macrofiles: ～ の行は削除する
     next if line[0,10] == "macrofiles"
     
-    # 設定ファイル OPTFLAGS の内容に従って、 optflags: 〜の行を編集
+    # 設定ファイル OPTFLAGS の内容に従って、 optflags: ～の行を編集
     if pats.size and line[0,9] == "optflags:"
       col = line.split(' ')
       str = col[2..-1].join(' ')
@@ -441,12 +441,13 @@ def is_build_required(hTAG)
   # - *.rpm が #{pkg}.specよりも古い場合
   # - *.rpm が *.src.rpm よりも古い場合
   spec = $DEPGRAPH.db.specs[pkg]
+
   if spec then
     spec.packages.each {|p|
       built = false
       found = false
-      ["#{$ARCHITECTURE}", "noarch"].each {|arch|
-        Dir.glob("#{topdir}/#{arch}/#{p.name}-*.rpm").each {|f|
+      if $STORE then
+        Dir.glob("#{topdir}/#{$STORE}/#{p.name}-*.rpm").each { |f|
           if p.name == File.basename(f).split("-")[0..-3].join("-") then
             found = true
             if ts < File.mtime(f) then
@@ -454,7 +455,18 @@ def is_build_required(hTAG)
             end
           end
         }
-      }
+      else
+        ["#{$ARCHITECTURE}", "noarch"].each {|arch|
+          Dir.glob("#{topdir}/#{arch}/#{p.name}-*.rpm").each {|f|
+            if p.name == File.basename(f).split("-")[0..-3].join("-") then
+              found = true
+              if ts < File.mtime(f) then
+                built = true
+              end
+            end
+          }
+        }
+      end
       if !found then
         momo_debug_log("#{p.name}-*.rpm is not found")
         return MOMO_SUCCESS
@@ -672,7 +684,11 @@ def prepare_outputdirs(hTAG, log_file)
   momo_debug_log("prepare_outputdirs #{hTAG['NAME']}")
 
   topdir = get_topdir(hTAG['NAME'], "..")
-  ["SOURCES", "SRPMS", "#{$ARCHITECTURE}", "noarch"].each do |subdir| 
+  (if $STORE then
+     ["SOURCES", "SRPMS", "#{$STORE}"]
+   else
+     ["SOURCES", "SRPMS", "#{$ARCHITECTURE}", "noarch"]
+   end).each do |subdir| 
     if !File.directory?("#{topdir}/#{subdir}") then
       exec_command("mkdir -p #{topdir}/#{subdir}", log_file)
     end
@@ -864,6 +880,3 @@ def recursive_build(path, name_stack, blacklist)
 ensure
   Dir.chdir pwd
 end
-
-
-

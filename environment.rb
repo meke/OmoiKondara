@@ -106,6 +106,8 @@ $CONF_FILES.each do |conf|
 	end
       when "GPGSIGN"
         $GPGSIGN = true
+      when "STORE"
+        $STORE = s.shift
       end
     end
   end

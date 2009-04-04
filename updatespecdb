@@ -26,7 +26,11 @@ end # module RPM
 
 class SpecDB
 
-  PackageData    = Struct.new(:name, :version, :group, :provides, :requires, :spec)
+  if $STORE then
+    PackageData  = Struct.new(:name, :version, :group, :provides, :requires, :spec, :arch)
+  else
+    PackageData  = Struct.new(:name, :version, :group, :provides, :requires, :spec)
+  end
   SpecData       = Struct.new(:name, :sources, :packages, :archs,
                               :buildRequires, :mtime, :lastbuild)
   DependencyData = Struct.new(:name, :version, :rel)
@@ -120,12 +124,22 @@ class SpecDB
           collect{|prov| prov.to_struct}
         requires = pkg.requires.
           collect{|req|  req.to_struct}
-        packages.push(PackageData.new(pkg.name,
-                                      pkg.version,
-                                      pkg[RPM::TAG_GROUP],
-                                      provides,
-                                      requires,
-                                      name))
+        if $STORE then
+          packages.push(PackageData.new(pkg.name,
+                                        pkg.version,
+                                        pkg[RPM::TAG_GROUP],
+                                        provides,
+                                        requires,
+                                        name,
+                                        pkg.arch))
+        else
+          packages.push(PackageData.new(pkg.name,
+                                        pkg.version,
+                                        pkg[RPM::TAG_GROUP],
+                                        provides,
+                                        requires,
+                                        name))
+        end
       end
 
       brs = if spec.buildrequires then

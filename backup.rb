@@ -104,14 +104,24 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
       end # if specname and $DEPGRAPH then
       # refresh the packages in #{topdir} with the newly built ones
       pkg = rpm.split("/")[-1].split("-")[0..-3].join("-")
-      Dir.glob("#{topdir}/{#{$ARCHITECTURE},noarch}/#{pkg}-*.{#{$ARCHITECTURE},noarch}.rpm") do |r|
+      glob_str = if $STORE then
+                   "#{topdir}/#{$STORE}/#{pkg}-*.{#{$ARCHITECTURE},noarch}.rpm"
+                 else
+                   "#{topdir}/{#{$ARCHITECTURE},noarch}/#{pkg}-*.{#{$ARCHITECTURE},noarch}.rpm"
+                 end
+      Dir.glob(glob_str) do |r|
         if pkg == r.split("/")[-1].split("-")[0..-3].join("-") then
           exec_command("rm -f #{r}", log_file)
         end
       end
-      current_arch = rpm.split('/')[-2]
-      exec_command("cp -pfv #{rpm} #{topdir}/#{current_arch}", log_file)
-      File.chmod 0644, "#{topdir}/#{current_arch}/#{rpm.split('/')[-1]}"
+      if $STORE then
+        exec_command("cp -pfv #{rpm} #{topdir}/#{$STORE}/", log_file)
+        File.chmod 0644, "#{topdir}/#{$STORE}/#{rpm.split('/')[-1]}"
+      else
+        current_arch = rpm.split('/')[-2]
+        exec_command("cp -pfv #{rpm} #{topdir}/#{current_arch}", log_file)
+        File.chmod 0644, "#{topdir}/#{current_arch}/#{rpm.split('/')[-1]}"
+      end
       if install then
         installs += "#{rpm} "
       elsif $DEPEND_PACKAGE != "" && pkg =~ /#{$DEPEND_PACKAGE}/
