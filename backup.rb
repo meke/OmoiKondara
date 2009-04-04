@@ -128,7 +128,11 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
           installs += "#{rpm} "
       end
       if $SCANPACKAGES && rpms.last == rpm then
-        exec_command("/usr/sbin/mph-scanpackages #{topdir}/#{$ARCHITECTURE} #{topdir}/noarch", log_file)
+        if $STORE then
+          exec_command("/usr/sbin/mph-scanpackages #{topdir}/#{$STORE}", log_file)
+        else
+          exec_command("/usr/sbin/mph-scanpackages #{topdir}/#{$ARCHITECTURE} #{topdir}/noarch", log_file)
+        end
       end
     end
     if installs != ""
