@@ -150,7 +150,7 @@ def do_rpmbuild(hTAG, log_file)
   result = MOMO_UNDEFINED
 
   pkg = hTAG['NAME']
-  momo_debug_log("do_rpmbuild #{pkg}")
+  momo_debug_log("do_rpmbuild #{hTAG['NAME']}")
 
   Dir.chdir pkg
 
@@ -254,7 +254,7 @@ def do_rpmbuild(hTAG, log_file)
   if rpmerr == 0 then
     clean_up(hTAG, install, rpmopt, log_file) if rpmopt =~ /\-ba|\-bb|\-bs|\-bp/
   else
-    if $WORKDIR then
+    if $WORKDIR && !File.exist?("#{hTAG['NAME']}/NO.TMPFS") then
       workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
         hTAG["VERSION"] + "-" + hTAG["RELEASE"]
       if $DEBUG_FLAG then
@@ -346,7 +346,7 @@ def clean_up(hTAG, install, rpmopt, log_file)
     end
   end
 
-  if $WORKDIR then
+  if $WORKDIR && !File.exist?("#{hTAG['NAME']}/NO.TMPFS") then
     workdir = $WORKDIR + "/" + hTAG["NAME"] + "-" +
       hTAG["VERSION"] + "-" + hTAG["RELEASE"]
 
@@ -502,7 +502,7 @@ end
 def prepare_builddirs(hTAG, log_file)
   momo_debug_log("prepare_builddirs #{hTAG['NAME']}")
 
-  if $WORKDIR then
+  if $WORKDIR && !File.exist?("#{hTAG['NAME']}/NO.TMPFS") then
     if File.exist?(hTAG["NAME"] + "/BUILD") then
       exec_command("rm -rf #{hTAG['NAME']}/BUILD", log_file)
       if $DEBUG_FLAG then
