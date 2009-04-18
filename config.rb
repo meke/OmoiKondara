@@ -108,6 +108,7 @@ Usage: ../tools/OmoiKondara [options] [names]
   -z, --zoo               build Zoo package, too
       --checksum "MODE"   checksum mode ("strict", "workaround", "maintainer")
       --random            build packages in random order
+      --nodeps            ignore buildreqs
       --numjobs num       set number of numjobs
   -h  --help              show this message
 END_OF_USAGE
@@ -201,6 +202,7 @@ end
   $NUMJOBS = 1
   $WORKDIR = nil
   $STORE = nil
+  $NODEPS = false
 
   GREEN           = "\e[1;32m"
   RED             = "\e[1;31m"
@@ -283,6 +285,7 @@ options = [
   ["-z", "--zoo",          GetoptLong::NO_ARGUMENT],
   ["--checksum",           GetoptLong::REQUIRED_ARGUMENT],
   ["--random",             GetoptLong::NO_ARGUMENT],
+  ["--nodeps",             GetoptLong::NO_ARGUMENT],
   ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
@@ -353,6 +356,8 @@ begin
       $CHECKSUM_MODE = ov
     when "--random"
       $RANDOM_ORDER = true
+    when "--nodeps"
+      $NODEPS = true
     when "--numjobs"
       $NUMJOBS = ov
     when "-h"

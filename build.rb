@@ -24,7 +24,7 @@ def generate_macrofiles(path)
   '/etc/rpm/macros:' \
   '/etc/rpm/%{_target}/macros:' \
   '~/.rpmmacros:' \
-  "#{path}/rpmmacros "
+  "#{path}/rpmmacros"
 end
 
 # rpmrcファイルの雛型 basefile を元に
@@ -223,6 +223,16 @@ def do_rpmbuild(hTAG, log_file)
     rpmopt += ' --sign'
   end
 
+  if $NODEPS then
+    rpmopt += " --nodeps"
+  end
+
+  rpmopt += " --rcfile rpmrc"
+
+  if rpm46? then
+    rpmopt += " " + generate_macrofiles(Dir.pwd)
+  end
+
   install = true if $INSTALL && /^(kernel|usolame)/ !~ pkg
   
   if (File.exist? "DISPLAY.PLEASE") && !(ENV.has_key? "DISPLAY")
@@ -235,7 +245,7 @@ def do_rpmbuild(hTAG, log_file)
 
   # rpmbuild の実行
   rpmerr = nil
-  cmd = "rpmbuild --rcfile rpmrc #{generate_macrofiles(Dir.pwd) if rpm46?}#{rpmopt} #{pkg}.spec"
+  cmd = "rpmbuild #{rpmopt} #{pkg}.spec"
   if File.exist?("SU.PLEASE") then
     rpmerr = exec_command("#{lang}sudo #{cmd}", log_file, need_timeout)
   else
@@ -293,8 +303,18 @@ def clean_up(hTAG, install, rpmopt, log_file)
 
   # $DEF_RPMOPT に -bp が含まれる場合は SOURCES/* を消さないで残す(-r -bp の場合)
   # それ以外の場合は消す
+  # rpm-4.6 までは --rmsource の場合でも buildreqs を検査するようなので
+  # $NODEPS が true のときは --nodeps オプションを rpmbuild に渡す。
   if not /\-bp/ =~ $DEF_RPMOPT then
-    exec_command("rpmbuild --rmsource --rcfile rpmrc #{generate_macrofiles(Dir.pwd) if rpm46?}#{pkg}.spec", log_file)
+    rpmopt = "--rmsource"
+    if $NODEPS then
+      rpmopt += " --nodeps"
+    end
+    rpmopt += " --rcfile rpmrc"
+    if rpm46? then
+      rpmopt += " " + generate_macrofiles(Dir.pwd)
+    end
+    exec_command("rpmbuild #{rpmopt} #{pkg}.spec", log_file)
   end
 
   File.delete "rpmrc"
@@ -744,12 +764,14 @@ def buildme(pkg, name_stack, blacklist)
     backup_logfile(log_file)
 
     # buildreq を解析して，必要なパッケージを build & install
-    log(log_file, "prepare buildreqs")
-    srpm_only = is_srpm_only(pkg)
-    if !srpm_only then
-      ret = prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
-      if true != ret then
-        throw :exit_buildme, MOMO_BUILDREQ
+    unless $NODEPS then
+      log(log_file, "prepare buildreqs")
+      srpm_only = is_srpm_only(pkg)
+      if !srpm_only then
+        ret = prepare_buildreqs(hTAG, name_stack, blacklist, log_file)
+        if true != ret then
+          throw :exit_buildme, MOMO_BUILDREQ
+        end
       end
     end
 
