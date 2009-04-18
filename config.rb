@@ -108,6 +108,7 @@ Usage: ../tools/OmoiKondara [options] [names]
   -z, --zoo               build Zoo package, too
       --checksum "MODE"   checksum mode ("strict", "workaround", "maintainer")
       --random            build packages in random order
+      --numjobs num       set number of numjobs
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -279,8 +280,9 @@ options = [
   ["-O", "--orphan",       GetoptLong::NO_ARGUMENT],
   ["-L", "--alter",        GetoptLong::NO_ARGUMENT],
   ["-z", "--zoo",          GetoptLong::NO_ARGUMENT],
-  ["--checksum",     GetoptLong::REQUIRED_ARGUMENT],
+  ["--checksum",           GetoptLong::REQUIRED_ARGUMENT],
   ["--random",             GetoptLong::NO_ARGUMENT],
+  ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
 
@@ -350,6 +352,8 @@ begin
       $CHECKSUM_MODE = ov
     when "--random"
       $RANDOM_ORDER = true
+    when "--numjobs"
+      $NUMJOBS = ov
     when "-h"
       show_usage      
     end
