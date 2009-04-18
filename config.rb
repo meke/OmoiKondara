@@ -110,6 +110,7 @@ Usage: ../tools/OmoiKondara [options] [names]
       --random            build packages in random order
       --nodeps            ignore buildreqs
       --numjobs num       set number of numjobs
+      --ftpcmd "FTP_CMD"  set ftp command
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -287,6 +288,7 @@ options = [
   ["--random",             GetoptLong::NO_ARGUMENT],
   ["--nodeps",             GetoptLong::NO_ARGUMENT],
   ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
+  ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
 
@@ -360,6 +362,8 @@ begin
       $NODEPS = true
     when "--numjobs"
       $NUMJOBS = ov
+    when "--ftpcmd"
+      $FTP_CMD = ov
     when "-h"
       show_usage      
     end
