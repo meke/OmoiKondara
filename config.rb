@@ -200,6 +200,7 @@ end
   $DISTCC_VERBOSE = false
   $NUMJOBS = 1
   $WORKDIR = nil
+  $STORE = nil
 
   GREEN           = "\e[1;32m"
   RED             = "\e[1;31m"
