@@ -44,6 +44,7 @@ def get_no(hTAG, type, log_file)
           end
           file.sub!(re, $URL_ALIAS[re]) if re
           status = exec_command("#{$FTP_CMD} '#{file}'", log_file)
+          status = -1 unless FileTest.exist?(File.basename(file))
           if status.nonzero? and !$MIRROR_FIRST
             # file retrieve error
             status = get_from_mirror(n, log_file)
