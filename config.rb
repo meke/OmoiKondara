@@ -95,6 +95,7 @@ Usage: ../tools/OmoiKondara [options] [names]
   -N, --nostrict          proceed by old behavior
   -r, --rpmopt "RPMOPTS"  specify option through to rpm
   -R, --ignore-remove     do not uninstall packege if REMOVE.* exists
+  -J, --noswitch-java     not auto switch java environment
   -s, --script            script mode
   -S, --scanpackages      execute mph-scanpackage
   -v, --verbose           verbose mode
@@ -169,6 +170,7 @@ end
   $CACHECC1_DISTCCDIR = "/nonexistent"
   $ARCH_DEP_PKGS_ONLY = false
   $IGNORE_REMOVE      = false
+  $NOSWITCH_JAVA      = false
   $FTP_CMD            = ""
   $FORCE_FETCH        = false
   $CHECK_ONLY         = false
@@ -273,6 +275,7 @@ options = [
   ["-N", "--nostrict",     GetoptLong::NO_ARGUMENT],
   ["-r", "--rpmopt",       GetoptLong::REQUIRED_ARGUMENT],
   ["-R", "--ignore-remove",GetoptLong::NO_ARGUMENT],
+  ["-J", "--noswitch-java",GetoptLong::NO_ARGUMENT],
   ["-s", "--script",       GetoptLong::NO_ARGUMENT],
   ["-S", "--scanpackages", GetoptLong::NO_ARGUMENT],
   ["-v", "--verbose",      GetoptLong::NO_ARGUMENT],
@@ -328,6 +331,8 @@ begin
       $DEF_RPMOPT = ov if ov
     when "-R"
       $IGNORE_REMOVE = true
+    when "-J"
+      $NOSWITCH_JAVA = true
     when "-s"
       $SCRIPT = true
     when "-S"

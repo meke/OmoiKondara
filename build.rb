@@ -243,14 +243,16 @@ def do_rpmbuild(hTAG, log_file)
   lang = lang.size.zero? ? "" : "env #{lang[0]} "
   need_timeout = File.exist?("TIMEOUT.PLEASE")
 
-  if File.exist?('JAVA15') then
-    current_jvm = `../../tools/v2/switch-java.py -c`.chomp!
-    exec_command("sudo ../../tools/v2/switch-java.py -j 1.5.0-gcj", log_file)
-  elsif File.exist?('JAVA16') then
-    current_jvm = `../../tools/v2/switch-java.py -c`.chomp!
-    exec_command("sudo ../../tools/v2/switch-java.py -j 1.6.0-openjdk", log_file)
-  else
-    current_jvm = nil
+  unless $NOSWITCH_JAVA then
+    if File.exist?('JAVA15') then
+      current_jvm = `../../tools/v2/switch-java.py -c`.chomp!
+      exec_command("sudo ../../tools/v2/switch-java.py -j 1.5.0-gcj", log_file)
+    elsif File.exist?('JAVA16') then
+      current_jvm = `../../tools/v2/switch-java.py -c`.chomp!
+      exec_command("sudo ../../tools/v2/switch-java.py -j 1.6.0-openjdk", log_file)
+    else
+      current_jvm = nil
+    end
   end
 
   # rpmbuild の実行
@@ -269,7 +271,9 @@ def do_rpmbuild(hTAG, log_file)
   end
 
   # 後始末
-  exec_command("sudo ../../tools/v2/switch-java.py -j #{current_jvm}", log_file) if current_jvm
+  unless $NOSWITCH_JAVA then
+    exec_command("sudo ../../tools/v2/switch-java.py -j #{current_jvm}", log_file) if current_jvm
+  end
 
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
   if rpmerr == 0 then
