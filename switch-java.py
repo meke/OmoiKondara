@@ -2,6 +2,7 @@
 
 import os
 import sys
+import commands
 from optparse import OptionParser
 from switch_java_functions import *
 
@@ -37,6 +38,9 @@ def main():
     if options.jvm != '1.6.0-openjdk' and options.jvm != '1.5.0-gcj':
         print >>sys.stderr, 'We can use 1.6.0-openjdk or 1.5.0-gcj only.'
         sys.exit(1)
+
+    if options.jvm == '1.6.0-openjdk' and commands.getoutput('arch') == 'x86_64':
+        options.jvm = '1.6.0-openjdk.x86_64'
 
     switch_java(options.jvm)
     print 'switched to', options.jvm
