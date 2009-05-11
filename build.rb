@@ -245,13 +245,9 @@ def do_rpmbuild(hTAG, log_file)
 
   unless $NOSWITCH_JAVA then
     if File.exist?('JAVA15') then
-      current_jvm = `../../tools/v2/switch-java.py -c`.chomp!
-      exec_command("sudo ../../tools/v2/switch-java.py -j 1.5.0-gcj", log_file)
+      ENV['JAVA_HOME']="/usr/lib/jvm/java-1.5.0"
     elsif File.exist?('JAVA16') then
-      current_jvm = `../../tools/v2/switch-java.py -c`.chomp!
-      exec_command("sudo ../../tools/v2/switch-java.py -j 1.6.0-openjdk", log_file)
-    else
-      current_jvm = nil
+      ENV['JAVA_HOME']="/usr/lib/jvm/java-1.6.0"
     end
   end
 
@@ -272,7 +268,7 @@ def do_rpmbuild(hTAG, log_file)
 
   # 後始末
   unless $NOSWITCH_JAVA then
-    exec_command("sudo ../../tools/v2/switch-java.py -j #{current_jvm}", log_file) if current_jvm
+    ENV.delete('JAVA_HOME')
   end
 
   ENV.delete("DISPLAY") if File.exist?("DISPLAY.PLEASE")
