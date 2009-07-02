@@ -119,6 +119,7 @@ class SpecDB
       end
 
       packages = []
+      ix86_list = `rpm --eval='%{ix86}'`.chomp!.split(' ')
       spec.packages.each do |pkg|
         provides = pkg.provides.
           collect{|prov| prov.to_struct}
@@ -131,7 +132,11 @@ class SpecDB
                                         provides,
                                         requires,
                                         name,
-                                        pkg.arch))
+                                        if ix86_list.include?(pkg.arch) then 
+                                          'i686'
+                                        else
+                                          pkg.arch
+                                        end))
         else
           packages.push(PackageData.new(pkg.name,
                                         pkg.version,
