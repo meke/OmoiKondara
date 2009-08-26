@@ -643,21 +643,31 @@ def verify_sources(hTAG, log_file, mode="strict")
     end
   }
 
-  sums = Hash.new
-  if File.exist?("#{hTAG['NAME']}/sources") then
-    open("#{hTAG['NAME']}/sources") { |f|
-      while l = f.gets
-        if /^([0-9abcdef]+)\s+([^\s]+)/ =~ l then
-          sums[File.basename($2)] = $1
-        end
-      end
-    }
-  end
-
   rslt = nil
   open("#{log_file}", "a") { |f|
     f.sync = true
     f.print "\n"
+
+    sums = Hash.new
+    if File.exist?("#{hTAG['NAME']}/sources") then
+      open("#{hTAG['NAME']}/sources") { |s|
+        dup = false
+        while l = s.gets
+          if /^([0-9abcdef]+)\s+([^\s]+)/ =~ l then
+            b = File.basename($2)
+            if sums[b] then
+              f.print "error: #{b} is duplicate in #{hTAG['NAME']}/sources\n"
+              print "error: #{b} is duplicate in #{hTAG['NAME']}/sources\n" if $VERBOSEOUT
+              dup = true
+            else
+              sums[b] = $1
+            end
+          end
+        end
+        return false if dup 
+      }
+    end
+
     rslt = srcs.map { |s|
       if sums.has_key?(s) then
         # checksum を確認する
@@ -679,7 +689,7 @@ def verify_sources(hTAG, log_file, mode="strict")
           false
         else
           # auto_append が true なら checksum を更新する
-          f.print "warring: #{s} has no sha256sum\n"
+          f.print "warning: #{s} has no sha256sum\n"
           if auto_append then
             f.print "auto-adding sha256sum for #{s}\n"
             cmd = "cd #{hTAG['NAME']}/SOURCES && sha256sum #{s} >> ../sources"
