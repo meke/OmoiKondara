@@ -83,6 +83,7 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
   files = search_rpm_files(pkg)
   if files.empty? then
     log(log_file, "there is no rpm package providing #{pkg}")
+    puts "there is no rpm package providing #{pkg}" if $VERBOSEOUT 
     return
   end
 
@@ -135,9 +136,11 @@ def install_pkg(pkg, name_stack, blacklist, log_file, retrycounter=10)
           case rc
             when MOMO_LOOP, MOMO_FAILURE
             log(log_file, "failed to rebuild #{p}")
+            puts "failed to rebuild #{p}" if $VERBOSEOUT
             return rc
             when MOMO_NO_SUCH_PACKAGE
             log(log_file, "could not find the package which provides #{p}")
+            puts "could not find the package which provides #{p}" if $VERBOSEOUT
             return rc
           end
 
@@ -380,6 +383,7 @@ def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
 
     if !$DEPGRAPH.db.packages.include?(req.name) then
       log(log_file, "required package #{req.name} is not found, skip it")
+      puts "required package #{req.name} is not found, skip it" if $VERBOSEOUT
       next
       # result = MOMO_FAILURE
       # return 
@@ -393,6 +397,7 @@ def chk_requires_strict(hTAG, name_stack, blacklist, log_file)
       case rc 
       when MOMO_LOOP, MOMO_FAILURE
         log(log_file, "failed to build or install #{spec.name}")
+        puts "failed to build or install #{spec.name}" if $VERBOSEOUT
         result = rc
         return
       end
