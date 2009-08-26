@@ -115,6 +115,9 @@ def generate_rpmrc(path)
   end
   copy_rpmrc(basefile, 'rpmrc', optfile)
 
+  smp_mflags = Dir.glob("SMP_MFLAGS*")
+  $NUMJOBS = smp_mflags[0].split('=')[1] unless smp_mflags.empty?
+
   macrofiles = `grep macrofiles ../rpmrc`.chop
   `echo #{macrofiles}#{path}/rpmmacros >> rpmrc`
   `echo %_topdir #{path} > rpmmacros`
