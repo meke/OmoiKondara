@@ -112,6 +112,7 @@ Usage: ../tools/OmoiKondara [options] [names]
       --nodeps            ignore buildreqs
       --numjobs num       set number of numjobs
       --ftpcmd "FTP_CMD"  set ftp command
+      --url-alias "ALIAS" set an url alias
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -292,6 +293,7 @@ options = [
   ["--nodeps",             GetoptLong::NO_ARGUMENT],
   ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
   ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
+  ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
 
@@ -369,6 +371,9 @@ begin
       $NUMJOBS = ov
     when "--ftpcmd"
       $FTP_CMD = ov
+    when "--url-alias"
+      pair = ov.split(' ')
+      $URL_ALIAS[Regexp.compile(pair[0])] = pair[1]
     when "-h"
       show_usage      
     end
