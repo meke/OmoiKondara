@@ -113,6 +113,7 @@ Usage: ../tools/OmoiKondara [options] [names]
       --numjobs num       set number of numjobs
       --ftpcmd "FTP_CMD"  set ftp command
       --url-alias "ALIAS" set an url alias
+      --noworkdir         do not use WORKDIR
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -294,6 +295,7 @@ options = [
   ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
   ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
   ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
+  ["--noworkdir",          GetoptLong::NO_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
 
@@ -374,6 +376,8 @@ begin
     when "--url-alias"
       pair = ov.split(' ')
       $URL_ALIAS[Regexp.compile(pair[0])] = pair[1]
+    when "--noworkdir"
+      $WORKDIR = nil
     when "-h"
       show_usage      
     end
