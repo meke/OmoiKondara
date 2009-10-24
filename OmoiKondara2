@@ -33,6 +33,11 @@ if not $NOSTRICT then
   puts " OK\n"
 end # if not $NOSTRICT then
 
+unless FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
+  print "Your momonga-rpmmacros is too old, and UPDATE 20090921-1m or later\n"
+  STDOUT.flush
+end
+
 if ARGV.length == 0 then
   if $DEPEND_PACKAGE == "" then
     name_stack = Array.new

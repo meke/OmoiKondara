@@ -111,7 +111,11 @@ class SpecDB
         next
       end
 
-      RPM.readrc('rpmrc')
+      if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
+        RPM.readrc('/usr/lib/rpm/rpmrc:/usr/lib/rpm/momonga/rpmrc:~/.rpmrc')
+      else
+        RPM.readrc('rpmrc')
+      end
       spec = RPM::Spec.open("#{name}/#{name}.spec")
       if spec.nil? then
         STDERR.puts "\n#{name}/#{name}.spec: error occurred."
@@ -119,7 +123,6 @@ class SpecDB
       end
 
       packages = []
-      ix86_list = `rpm --eval='%{ix86}'`.chomp!.split(' ')
       spec.packages.each do |pkg|
         provides = pkg.provides.
           collect{|prov| prov.to_struct}
@@ -132,11 +135,7 @@ class SpecDB
                                         provides,
                                         requires,
                                         name,
-                                        if ix86_list.include?(pkg.arch) then 
-                                          'i686'
-                                        else
-                                          pkg.arch
-                                        end))
+                                        pkg.arch))
         else
           packages.push(PackageData.new(pkg.name,
                                         pkg.version,

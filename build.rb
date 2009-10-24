@@ -15,7 +15,7 @@ require 'backup'
 # 文字列に含まれる %{_target} などのマクロや * と ~ はちゃんと展開される。
 # ただし、マクロは上記の rpmrc.c で定義されているものに限られると思う。
 def generate_macrofiles(path)
-  '--macros=' \
+  '--macros ' \
   '/usr/lib/rpm/macros:' \
   '/usr/lib/rpm/macros.momonga:' \
   '/usr/lib/rpm/platform/%{_target}/macros:' \
@@ -49,7 +49,8 @@ end
 #     $    " -Wall"
 #     ^    "-Wall"
 
-def copy_rpmrc(basefile, newfile, optfile = nil)
+# newfile は optflags: 行のみを含む
+def generate_rpmrc_optflgas(basefile, newfile, optfile = nil)
   pats = []
   if !optfile.nil?
     File.open(optfile).each { |line|
@@ -78,9 +79,6 @@ def copy_rpmrc(basefile, newfile, optfile = nil)
   newf = File.open(newfile, 'w')
 
   File.open(basefile, 'r').each { |line|
-    # macrofiles: ～ の行は削除する
-    next if line[0,10] == "macrofiles"
-    
     # 設定ファイル OPTFLAGS の内容に従って、 optflags: ～の行を編集
     if pats.size and line[0,9] == "optflags:"
       col = line.split(' ')
@@ -90,36 +88,55 @@ def copy_rpmrc(basefile, newfile, optfile = nil)
       }
       line = col[0..1].join(' ') + ' ' + str + "\n"
       newf.print line
-    else
-      newf.print line
     end
   }
 
   newf.close
 end
 
-# カレントディレクトリに rpmrc を生成する
+# カレントディレクトリに rpmrc と rpmmacros を生成する
 #
 # !!FIXME!!  現状では path== Dir.pwd の場合しか動作しないと思われる
 #
-def generate_rpmrc(path)
-  if $DEBUG_FLAG 
-    basefile = "../rpmrc.debug"
-  else
-    basefile = "../rpmrc"
-  end
-  if File.exist?("OPTFLAGS")
-    optfile = 'OPTFLAGS'
-  else
-    optfile = nil 
-  end
-  copy_rpmrc(basefile, 'rpmrc', optfile)
+def copy_rpmrc(basefile, newfile)
+  f = File.open(newfile, 'w')
+  File.open(basefile, 'r').each { |l|
+    # macrofiles: ～ の行は削除する
+    next if l[0,10] == "macrofiles"
+    f.print l
+  }
+  f.close
+end
 
+def generate_rpmrc(path)
+  basefile = 
+    if $DEBUG_FLAG 
+      if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc.debug') then
+        '/usr/lib/rpm/momonga/rpmrc.debug'
+      else
+        '../rpmrc.debug'
+      end
+    else
+      if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
+        '/usr/lib/rpm/momonga/rpmrc'
+      else
+        '../rpmrc'
+      end
+    end
+
+  copy_rpmrc(basefile, 'rpmrc')
+
+  macrofiles = `grep macrofiles: #{basefile}`.chop
+  `echo #{macrofiles}#{path}/rpmmacros >> rpmrc`
+
+  optfile = if FileTest.exist?('OPTFLAGS') then 'OPTFLAGS' else nil end
+  generate_rpmrc_optflgas(basefile, 'rpmrc.optflags', optfile) if optfile
+end
+
+def generate_rpmmacros(path)
   smp_mflags = Dir.glob("SMP_MFLAGS*")
   $NUMJOBS = smp_mflags[0].split('=')[1] unless smp_mflags.empty?
 
-  macrofiles = `grep macrofiles ../rpmrc`.chop
-  `echo #{macrofiles}#{path}/rpmmacros >> rpmrc`
   `echo %_topdir #{path} > rpmmacros`
   `echo %_arch #{$ARCHITECTURE} >> rpmmacros`
   `echo %_host_cpu #{$ARCHITECTURE} >> rpmmacros`
@@ -191,8 +208,9 @@ def do_rpmbuild(hTAG, log_file)
     ENV["CACHECC1_DISTCCDIR"] = $CACHECC1_DISTCCDIR
   end
 
-  # カレントディレクトリに rpmrc を生成
+  # カレントディレクトリに rpmrc と rpmmacros を生成
   generate_rpmrc(Dir.pwd)
+  generate_rpmmacros(Dir.pwd)
 
   # rpmbuild のオプション
   rpmopt = $DEF_RPMOPT
@@ -208,17 +226,31 @@ def do_rpmbuild(hTAG, log_file)
     # .spec をパースしてすべてのサブパッケージを消すべき。
     # すべての .spec の依存関係がただしければ、依存するものも
     # 全消去するべき。
-    RPM.readrc("./rpmrc")
+    if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
+      RPM.readrc('/usr/lib/rpm/rpmrc:./rpmrc:~/.rpmrc')
+    else
+      RPM.readrc("./rpmrc")
+    end
     RPM::Spec.open(pkg+".spec").packages.each do |subpkg|
       exec_command("sudo rpm -e --nodeps #{subpkg.name}", log_file)
     end
     install = true
   end
   Dir.glob("REMOVEME.*").each do |r|
-    rp = r.split(/\./)[1]
-    if `rpm -q #{rp}` =~ /^#{rp}/ then
-      `sudo rpm -e --nodeps #{rp}`
-      install = true
+    ary = r.split(/\./)
+    len = ary.length
+    if len == 2 then
+      rp = ary[1]
+      if `rpm -q #{rp}` =~ /^#{rp}/ then
+        exec_command("sudo rpm -e --nodeps #{rp}", log_file)
+        install = true
+      end
+    elsif len == 3 && $ARCHITECTURE == 'x86_64' then
+      rp = ary[1, 2].join('.')
+      if `rpm -q #{rp}` =~ /^#{ary[1]}.*\.#{ary[2]}/ then
+        exec_command("sudo rpm -e --nodeps #{rp}", log_file)
+        install = true
+      end
     end
   end if !$IGNORE_REMOVE && rpmopt =~ /\-ba|\-bb/
 
@@ -227,10 +259,20 @@ def do_rpmbuild(hTAG, log_file)
   end
 
   if $NODEPS then
-    rpmopt += " --nodeps"
+    rpmopt += ' --nodeps'
   end
 
-  rpmopt += " --rcfile rpmrc"
+  optflags = if FileTest.exist?('rpmrc.optflags') then 
+               ':./rpmrc.optflags'
+             else 
+               ''
+             end
+
+  if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
+    rpmopt += " --rcfile /usr/lib/rpm/rpmrc:./rpmrc#{optflags}:~/.rpmrc"
+  else
+    rpmopt += " --rcfile ./rpmrc#{optflags}"
+  end
 
   if rpm46? then
     rpmopt += " " + generate_macrofiles(Dir.pwd)
@@ -324,15 +366,22 @@ def clean_up(hTAG, install, rpmopt, log_file)
     if $NODEPS then
       rpmopt += " --nodeps"
     end
-    rpmopt += " --rcfile rpmrc"
+
+    if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
+      rpmopt += ' --rcfile /usr/lib/rpm/rpmrc:./rpmrc:~/.rpmrc'
+    else
+      rpmopt += ' --rcfile ./rpmrc'
+    end
+
     if rpm46? then
       rpmopt += " " + generate_macrofiles(Dir.pwd)
     end
     exec_command("rpmbuild #{rpmopt} #{pkg}.spec", log_file)
   end
 
-  File.delete "rpmrc"
-  File.delete "rpmmacros"
+  File.delete 'rpmrc'
+  File.delete 'rpmrc.optflags' if FileTest.exist?('rpmrc.optflags')
+  File.delete 'rpmmacros'
 
   # $DEBUG_FLAG が non nilだとBUILDを消さないで残す
   if $DEBUG_FLAG then
