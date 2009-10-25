@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # -*- ruby-mode -*-
 #
 #
@@ -27,11 +28,13 @@ def generate_macrofiles(path)
   "#{path}/rpmmacros"
 end
 
-# rpmrcファイルの雛型 basefile を元に
+# rpmrcファイルの雛型 orignalfile を元に
 # 新しいrpmrcファイル newfile を作成する
 #
 # 第三引数で設定ファイル(OPTFLAGS)が指定された場合は
 # 設定ファイルの内容に従って newfile中のoptflags: 行を置換する
+#
+# optflags: 以外の行は、そのまま orignalfile から newfile へコピーする
 #
 # 設定ファイル(OPTFLAGS)の書式は以下の通り
 # - 置換ルール("pattern" と "replacement" の対)を一行づつ記述
@@ -48,11 +51,19 @@ end
 # 追加する場合)
 #     $    " -Wall"
 #     ^    "-Wall"
+def generate_rpmrc_optflgas(orignalfile, newfile, optfile = nil)
+  basefile = 
+    if orignalfile == newfile then
+      # for alias-safe
+      tmp="#{orignalfile}.tmp"
+      FileUtils.copy(orignalfile, tmp)
+      tmp
+    else
+      orignalfile
+    end
 
-# newfile は optflags: 行のみを含む
-def generate_rpmrc_optflgas(basefile, newfile, optfile = nil)
   pats = []
-  if !optfile.nil?
+  if !optfile.nil? && File.exist?(optfile)
     File.open(optfile).each { |line|
       line.chomp!
       
@@ -87,16 +98,21 @@ def generate_rpmrc_optflgas(basefile, newfile, optfile = nil)
         str.gsub!(/#{pattern}/, replace)
       }
       line = col[0..1].join(' ') + ' ' + str + "\n"
-      newf.print line
     end
+    newf.print line
   }
 
   newf.close
+  # delete temp file
+  if basefile != orignalfile then
+    File.delete basefile
+  end
 end
 
-# カレントディレクトリに rpmrc と rpmmacros を生成する
+# basefile から newfile を生成する
 #
-# !!FIXME!!  現状では path== Dir.pwd の場合しか動作しないと思われる
+# - basefile が存在する場合は、 macrofiles: 〜 以外の行を newfile にコピーする
+# - basefile が存在しない場合は、newfileは空ファイルとする
 #
 def copy_rpmrc(basefile, newfile)
   f = File.open(newfile, 'w')
@@ -105,10 +121,15 @@ def copy_rpmrc(basefile, newfile)
     next if l[0,10] == "macrofiles"
     f.print l
   }
+rescue
+  f.print "\n"
+ensure
   f.close
 end
 
+# ./rpmrc と ./dot.rpmrc を生成する
 def generate_rpmrc(path)
+  # 1) ./rpmrc を生成する
   basefile = 
     if $DEBUG_FLAG 
       if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc.debug') then
@@ -123,14 +144,18 @@ def generate_rpmrc(path)
         '../rpmrc'
       end
     end
-
   copy_rpmrc(basefile, 'rpmrc')
-
   macrofiles = `grep macrofiles: #{basefile}`.chop
   `echo #{macrofiles}#{path}/rpmmacros >> rpmrc`
 
-  optfile = if FileTest.exist?('OPTFLAGS') then 'OPTFLAGS' else nil end
-  generate_rpmrc_optflgas(basefile, 'rpmrc.optflags', optfile) if optfile
+  # 2) さらに ~/.rpmrcから ./dot.rpmrc を生成
+  #    (~/.rpmrc が存在しない場合は 空ファイルをつくる)
+  dotfile="#{ENV['HOME']}/.rpmrc"
+  copy_rpmrc(dotfile, 'dot.rpmrc')
+
+  # 3) OPTFLAGSがあれば、./rpmrc と ./dot.rpmrc の中身を置換。
+  generate_rpmrc_optflgas('rpmrc', 'rpmrc', 'OPTFLAGS')
+  generate_rpmrc_optflgas('dot.rpmrc', 'dot.rpmrc', 'OPTFLAGS')
 end
 
 def generate_rpmmacros(path)
@@ -208,7 +233,7 @@ def do_rpmbuild(hTAG, log_file)
     ENV["CACHECC1_DISTCCDIR"] = $CACHECC1_DISTCCDIR
   end
 
-  # カレントディレクトリに rpmrc と rpmmacros を生成
+  # カレントディレクトリに rpmrc、dot.rpmrc、 rpmmacros を生成
   generate_rpmrc(Dir.pwd)
   generate_rpmmacros(Dir.pwd)
 
@@ -227,7 +252,7 @@ def do_rpmbuild(hTAG, log_file)
     # すべての .spec の依存関係がただしければ、依存するものも
     # 全消去するべき。
     if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
-      RPM.readrc('/usr/lib/rpm/rpmrc:./rpmrc:~/.rpmrc')
+      RPM.readrc('/usr/lib/rpm/rpmrc:./rpmrc:./dot.rpmrc')
     else
       RPM.readrc("./rpmrc")
     end
@@ -262,16 +287,10 @@ def do_rpmbuild(hTAG, log_file)
     rpmopt += ' --nodeps'
   end
 
-  optflags = if FileTest.exist?('rpmrc.optflags') then 
-               ':./rpmrc.optflags'
-             else 
-               ''
-             end
-
   if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
-    rpmopt += " --rcfile /usr/lib/rpm/rpmrc:./rpmrc#{optflags}:~/.rpmrc"
+    rpmopt += " --rcfile /usr/lib/rpm/rpmrc:./rpmrc:./dot.rpmrc"
   else
-    rpmopt += " --rcfile ./rpmrc#{optflags}"
+    rpmopt += " --rcfile ./rpmrc"
   end
 
   if rpm46? then
@@ -291,7 +310,7 @@ def do_rpmbuild(hTAG, log_file)
   unless $NOSWITCH_JAVA then
     if File.exist?('JAVA15') then
       ENV['JAVA_HOME']="/usr/lib/jvm/java-1.5.0"
-    elsif File.exist?('JAVA16') then
+    else
       ENV['JAVA_HOME']="/usr/lib/jvm/java-1.6.0"
     end
   end
@@ -368,7 +387,7 @@ def clean_up(hTAG, install, rpmopt, log_file)
     end
 
     if FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then
-      rpmopt += ' --rcfile /usr/lib/rpm/rpmrc:./rpmrc:~/.rpmrc'
+      rpmopt += ' --rcfile /usr/lib/rpm/rpmrc:./rpmrc:./dot.rpmrc'
     else
       rpmopt += ' --rcfile ./rpmrc'
     end
@@ -380,7 +399,7 @@ def clean_up(hTAG, install, rpmopt, log_file)
   end
 
   File.delete 'rpmrc'
-  File.delete 'rpmrc.optflags' if FileTest.exist?('rpmrc.optflags')
+  File.delete 'dot.rpmrc'
   File.delete 'rpmmacros'
 
   # $DEBUG_FLAG が non nilだとBUILDを消さないで残す
