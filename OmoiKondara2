@@ -4,7 +4,7 @@
 
 $:.unshift(File.dirname($0))
 if FileTest.symlink?($0) then
-	$:.unshift(File.dirname($0) + "/v2")
+  $:.unshift(File.dirname($0) + "/v2")
 end
 
 require 'environment'
@@ -15,22 +15,25 @@ require 'utils'
 require 'config'
 require 'build'
 
-if not $NOSTRICT then
-  print "reading RPM database to see what is installed ..."
+require 'progressbar'
+
+unless $NOSTRICT then
   STDOUT.flush
+  pbar = ProgressBar.new('read rpmdb', `rpm -qa | wc -l`.chomp!.to_i) unless $SCRIPT
   begin
     rpmdb = RPM::DB.open
     rpmdb.each do |pkg|
+      pbar.inc unless $SCRIPT
       pkg.provides.each do |a|
         next if (a.flags & RPM::SENSE_RPMLIB).nonzero?
         $SYSTEM_PROVIDES.push(a.to_struct)
       end
     end # rpmdb.each do |pkg|
+    pbar.finish unless $SCRIPT
   ensure
     rpmdb = nil
     GC.start
   end
-  puts " OK\n"
 end # if not $NOSTRICT then
 
 unless FileTest.exist?('/usr/lib/rpm/momonga/rpmrc') then

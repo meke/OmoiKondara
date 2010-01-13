@@ -1,7 +1,12 @@
-#! /usr/bin/env ruby19
+#! /usr/bin/ruby19 -Ku
+
+$:.unshift(File.dirname($0))
 
 require 'pstore'
 require 'rpm'
+
+require 'environment'
+require 'progressbar'
 
 module RPM
   class Dependency
@@ -54,7 +59,7 @@ class SpecDB
   attr_reader :packages
 
   def commit!
-    print 'saving .specdb ... '
+    print 'saving .specdb ... ' if @verbosity
     STDOUT.flush
     begin
       db = PStore.new(FILENAME)
@@ -63,11 +68,12 @@ class SpecDB
         db.commit
       end
     end
-    puts 'done'
+    puts 'done' if @verbosity
   end # def commit!
 
   def initialize(verbose=false)
     RPM.verbosity = RPM::LOG_INFO
+    @verbosity = verbose
 
     @names = (Dir.glob('./*').select do |dir|
                 name = File.basename(dir)
@@ -77,9 +83,7 @@ class SpecDB
                   !File.exist?("#{dir}/SKIP")
               end).collect {|dir| File.basename(dir)}.sort.freeze
 
-    if verbose then
-      STDERR.puts "number of specfiles: #{@names.length}"
-    end
+    puts "number of specfiles: #{@names.length}" unless $SCRIPT
 
     @specs = {}
     if File.exist?(FILENAME) then
@@ -102,6 +106,9 @@ class SpecDB
         @specs.delete(name)
       end
     end
+
+    STDOUT.flush
+    pbar = ProgressBar.new('scan specs', @names.length) unless @verbosity || $SCRIPT
 
     updated = false
     @names.each_with_index do |name, i|
@@ -161,13 +168,16 @@ class SpecDB
       @specs[name] = SpecData.new(name, spec.sources, packages,
                                   spec.buildarchs, brs, mtime, lastbuild)
 
-      if verbose then
-        STDERR.puts name
-        STDERR.print "\rscanning specfile: #{100*i/@names.length}%"
-        STDERR.flush
+      if @verbosity then
+        puts name
+        print "\rscanning specfile: #{100*i/@names.length}%"
+        STDOUT.flush
       end
+
+      pbar.inc unless @verbosity || $SCRIPT
     end # @names.each_with_index do |name, i|
-    STDERR.puts "\rscanning specfile: 100%" if verbose
+    pbar.finish unless @verbosity || $SCRIPT
+    puts "\rscanning specfile: 100%" if @verbosity
 
     commit! if updated
 

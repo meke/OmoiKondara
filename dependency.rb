@@ -11,8 +11,7 @@ rescue Exception
   $CANNOTSTRICT = true
 end
 begin
-  # be quiet if script mode
-  $DEPGRAPH = DepGraph.new(!$SCRIPT) unless $NOSTRICT
+  $DEPGRAPH = DepGraph.new(false) unless $NOSTRICT
 rescue => e
   STDERR.puts e.message
   exit 1

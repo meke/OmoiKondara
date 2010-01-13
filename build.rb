@@ -122,7 +122,7 @@ def copy_rpmrc(basefile, newfile)
     f.print l
   }
 rescue
-  f.print "\n"
+  f.print "\n" unless f.pos.zero?
 ensure
   f.close
 end

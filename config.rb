@@ -364,6 +364,9 @@ begin
     when "-z"
       $MAIN_ONLY = false
     when "--checksum"
+      unless ['strict', 'workaround', 'maintainer'].include?(ov)
+        raise GetoptLong::InvalidOption, 'You can use strict, workaround or maintainer only with --checksum option'
+      end
       $CHECKSUM_MODE = ov
     when "--random"
       $RANDOM_ORDER = true
@@ -382,6 +385,9 @@ begin
       show_usage      
     end
   end
+rescue GetoptLong::InvalidOption
+  print $!.message, "\n"
+  exit 1
 rescue
   exit 1
 end
