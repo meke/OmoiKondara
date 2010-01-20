@@ -114,6 +114,7 @@ Usage: ../tools/OmoiKondara [options] [names]
       --ftpcmd "FTP_CMD"  set ftp command
       --url-alias "ALIAS" set an url alias
       --noworkdir         do not use WORKDIR
+      --rmsrc             remove local cached NoSource/NoPatch
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -206,6 +207,7 @@ end
   $DISTCC_VERBOSE = false
   $NUMJOBS = 1
   $WORKDIR = nil
+  $RMSRC = false
   $STORE = nil
   $NODEPS = false
 
@@ -296,6 +298,7 @@ options = [
   ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
   ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
   ["--noworkdir",          GetoptLong::NO_ARGUMENT],
+  ["--rmsrc",              GetoptLong::NO_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
 
@@ -381,6 +384,8 @@ begin
       $URL_ALIAS[Regexp.compile(pair[0])] = pair[1]
     when "--noworkdir"
       $WORKDIR = nil
+    when "--rmsrc"
+      $RMSRC = true
     when "-h"
       show_usage      
     end

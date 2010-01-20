@@ -25,6 +25,16 @@ def get_no(hTAG, type, log_file)
   nosrc.each do |no|
     file = hTAG["#{type}#{no}"]
     file = hTAG["#{type}"] if no == "0" and file.nil?
+    if $RMSRC
+      f = File.basename(file)
+      ["#{hTAG['NAME']}/SOURCES/#{f}",
+       "#{File.expand_path($TOPDIR)}/SOURCES/#{f}"].each { |g|
+        if FileTest.exist?(g)
+          File.delete(g)
+          momo_debug_log("remove local cached NoSource/NoPatch: #{f}")
+        end
+      }
+    end
     if file =~ /^(ftp|https?):\/\// then
       n = file.split(/\//)[-1]
       if !cp_local(hTAG, n, log_file) then
