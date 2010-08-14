@@ -178,8 +178,8 @@ def generate_rpmmacros(path)
   if $DEBUG_FLAG then
     `echo %OmoiKondara_enable_debug 1 >> rpmmacros`
     `echo '%__os_install_post    \\' >> rpmmacros`
-    `echo '    /usr/lib/rpm/brp-compress \\' >> rpmmacros`
-    `echo '    /usr/lib/rpm/modify-init.d \\' >> rpmmacros`
+    `echo '    /usr/lib/rpm/momonga/brp-compress \\' >> rpmmacros`
+    `echo '    /usr/lib/rpm/momonga/modify-init.d \\' >> rpmmacros`
     `echo '%{nil}' >> rpmmacros`
   else
     `echo %OmoiKondara_enable_debug 0 >> rpmmacros`
