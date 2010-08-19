@@ -142,7 +142,13 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
           f.puts(i)
         }
       }
-      exec_command("cat #{installs_lst} | sudo xargs rpm -Uvh --force || cat #{installs_lst} | sudo xargs rpm -Uvh --nodeps --force", log_file)
+      install_exe = 'RPMS/install.sh'
+      open(install_exe, 'w') { |f|
+        f.puts('#!/bin/bash')
+        f.puts("cat #{installs_lst} | xargs rpm -Uvh --force || cat #{installs_lst} | xargs rpm -Uvh --nodeps --force")
+      }
+      File.chmod(0755, install_exe)
+      exec_command("sudo ./#{install_exe}", log_file)
       until $SYSTEM_PROVIDES.empty?
         $SYSTEM_PROVIDES.pop
       end
