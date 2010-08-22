@@ -136,7 +136,17 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
       end
     end
     if installs != ""
-      exec_command("sudo rpm -Uvh --force #{installs} || sudo rpm -Uvh --nodeps --force #{installs}", log_file)
+
+      installs_lst = 'RPMS/installs.lst'
+      open(installs_lst, 'w') { |f| 	 
+        installs.split(/\s+/).each { |i| 	 
+          f.puts(i) 	 
+        } 	 
+      } 	 
+
+      install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
+      exec_command("sudo #{install_exe} #{installs_lst}", log_file)
+
       until $SYSTEM_PROVIDES.empty?
         $SYSTEM_PROVIDES.pop
       end
