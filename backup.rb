@@ -137,7 +137,7 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
     end
     if installs != ""
 
-      installs_lst = 'RPMS/installs.lst'
+      installs_lst = 'installs.lst'
       open(installs_lst, 'w') { |f| 	 
         installs.split(/\s+/).each { |i| 	 
           f.puts(i) 	 
@@ -146,6 +146,8 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
 
       install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
       exec_command("sudo #{install_exe} #{installs_lst}", log_file)
+
+      File.delete(installs_lst)
 
       until $SYSTEM_PROVIDES.empty?
         $SYSTEM_PROVIDES.pop
