@@ -298,6 +298,10 @@ def do_rpmbuild(hTAG, log_file)
   end
 
   install = true if $INSTALL && /^(kernel|usolame)/ !~ pkg
+
+  ENV.delete('MALLOC_CHECK_')
+  ENV.delete('MALLOC_PERTURB_')
+  ENV.delete('G_SLICE')
   
   if (File.exist? "DISPLAY.PLEASE") && !(ENV.has_key? "DISPLAY")
     ENV["DISPLAY"]=$DISPLAY
