@@ -983,7 +983,7 @@ def recursive_build(path, name_stack, blacklist)
       end
     else
       if pn =~ /^.+\.spec$/ &&
-          ( File.exist?("CVS/Repository") || File.exist?(".svn/entries") ) then
+          ( File.exist?("CVS/Repository") || File.exist?(".svn/entries") || system("svn info . > /dev/null 2>&1")) then
         pkg = Dir.pwd.split("/")[-1]
         Dir.chdir ".."
         buildme(pkg, name_stack, blacklist)
