@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # BuildReq: に指定されていても、無視するパッケージ
 $IGNORE_BUILDREQ_PKGS = ["rpmlib(VersionedDependencies)"]
@@ -35,6 +36,11 @@ def search_rpm_files(prov)
       pattern.gsub!(/\(/,'-')
       pattern.gsub!(/\)/,'-')
       pattern.gsub!(/::/,'-')
+
+    # rubygem(hoge) => rubygem-hoge
+    elsif pattern =~ /^rubygem\(.*\)$/ then
+      pattern.gsub!(/\(/,'-')
+      pattern.gsub!(/\)/,'')
     end
     pattern.downcase!
 
