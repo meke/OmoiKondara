@@ -297,7 +297,18 @@ def do_rpmbuild(hTAG, log_file)
     rpmopt += " " + generate_macrofiles(Dir.pwd)
   end
 
-  install = true if $FORCE_INSTALL && $INSTALL && /^(kernel|usolame)/ !~ pkg
+## default  install=false
+## option -i -> install=true
+## option -i --forceinstall -> install=true
+## option --forceinstall -> install=false
+
+  if $INSTALL && /^(kernel|usolame)/ !~ pkg then
+    install = true
+  elsif $INSTALL && $FORCE_INSTALL && /^(kernel|usolame)/ !~ pkg then
+    install = true
+  elsif !$INSTALL && $FORCE_INSTALL && /^(kernel|usolame)/ !~ pkg then
+    install = false
+  end
 
   ENV.delete('MALLOC_CHECK_')
   ENV.delete('MALLOC_PERTURB_')
