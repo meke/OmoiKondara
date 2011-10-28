@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 #
 # 定数
@@ -89,7 +90,7 @@ Usage: ../tools/OmoiKondara [options] [names]
   -F  --force-fetch       force fetch NoSource/NoPatch
   -o  --check-only        checksum compare(run "rpmbuild -bp")
   -g, --checkgroup        group check only
-  -i, --install           force install after build (except kernel and usolame)
+  -i, --install           (ignored. remained for compatibility)
   -m, --main              main package only
   -n, --nonfree           build Nonfree package, too
   -N, --nostrict          proceed by old behavior
@@ -112,6 +113,7 @@ Usage: ../tools/OmoiKondara [options] [names]
       --nodeps            ignore buildreqs
       --numjobs num       set number of numjobs
       --ftpcmd "FTP_CMD"  set ftp command
+      --forceinstall      force install after build (except kernel and usolame)
       --url-alias "ALIAS" set an url alias
       --noworkdir         do not use WORKDIR
       --rmsrc             remove local cached NoSource/NoPatch
@@ -165,6 +167,7 @@ end
   $NOSTRICT           = $CANNOTSTRICT
   $GROUPCHECK         = false
   $INSTALL            = false
+  $FORCE_INSTALL      = false
   $SCRIPT             = false
   $MIRROR_FIRST       = false
   $SCANPACKAGES       = false
@@ -296,6 +299,7 @@ options = [
   ["--nodeps",             GetoptLong::NO_ARGUMENT],
   ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
   ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
+  ["--forceinstall",       GetoptLong::NO_ARGUMENT],
   ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
   ["--noworkdir",          GetoptLong::NO_ARGUMENT],
   ["--rmsrc",              GetoptLong::NO_ARGUMENT],
@@ -322,7 +326,10 @@ begin
     when "-g"
       $GROUPCHECK = true
     when "-i"
-      $INSTALL = true
+#      $INSTALL = true
+      $INSTALL = $INSTALL #nop
+#    when "-I"
+#      $FORCE_INSTALL = true
     when "-m"
 #      $MAIN_ONLY = true
     when "-F"
@@ -359,10 +366,10 @@ begin
         $ENABLE_DISTCC = true
       end
     when "-O"
-      $MAIN_ONLY = false      
+      $MAIN_ONLY = false
       $BUILD_ORPHAN = true
     when "-L"
-      $MAIN_ONLY = false      
+      $MAIN_ONLY = false
       $BUILD_ALTER = true
     when "-z"
       $MAIN_ONLY = false
@@ -379,6 +386,8 @@ begin
       $NUMJOBS = ov
     when "--ftpcmd"
       $FTP_CMD = ov
+    when "--forceinstall"
+      $FORCE_INSTALL = true
     when "--url-alias"
       pair = ov.split(' ')
       $URL_ALIAS[Regexp.compile(pair[0])] = pair[1]
@@ -387,7 +396,7 @@ begin
     when "--rmsrc"
       $RMSRC = true
     when "-h"
-      show_usage      
+      show_usage
     end
   end
 rescue GetoptLong::InvalidOption
