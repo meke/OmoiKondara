@@ -90,7 +90,7 @@ Usage: ../tools/OmoiKondara [options] [names]
   -F  --force-fetch       force fetch NoSource/NoPatch
   -o  --check-only        checksum compare(run "rpmbuild -bp")
   -g, --checkgroup        group check only
-  -i, --install           (ignored. remained for compatibility)
+  -i, --install           install after build (except kernel and usolame)
   -m, --main              main package only
   -n, --nonfree           build Nonfree package, too
   -N, --nostrict          proceed by old behavior
@@ -326,8 +326,7 @@ begin
     when "-g"
       $GROUPCHECK = true
     when "-i"
-#      $INSTALL = true
-      $INSTALL = $INSTALL #nop
+      $INSTALL = true
 #    when "-I"
 #      $FORCE_INSTALL = true
     when "-m"

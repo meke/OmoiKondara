@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # --  backup系 --------------------------------------------------------------
 
 def backup_logfile(log_file)
@@ -144,7 +145,12 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
         } 	 
       } 	 
 
-      install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
+      if $FORCE_INSTALL then
+        install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/force-install.sh")
+      elsif $INSTALL
+        install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
+      end
+
       exec_command("sudo #{install_exe} #{installs_lst}", log_file)
 
       File.delete(installs_lst)
