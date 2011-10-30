@@ -304,10 +304,6 @@ def do_rpmbuild(hTAG, log_file)
 
   if $INSTALL && /^(kernel|usolame)/ !~ pkg then
     install = true
-  elsif $INSTALL && $FORCE_INSTALL && /^(kernel|usolame)/ !~ pkg then
-    install = true
-  elsif !$INSTALL && $FORCE_INSTALL && /^(kernel|usolame)/ !~ pkg then
-    install = false
   end
 
   ENV.delete('MALLOC_CHECK_')
