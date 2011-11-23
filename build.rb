@@ -246,7 +246,7 @@ def do_rpmbuild(hTAG, log_file)
     rpmopt = "-bp"
   end
   rpmopt += " --target #{$ARCHITECTURE}"
-  
+
   if !$IGNORE_REMOVE && !$CHECK_ONLY && File.exist?("REMOVE.PLEASE") && /\-ba|\-bb/ =~ rpmopt then
     # .spec をパースしてすべてのサブパッケージを消すべき。
     # すべての .spec の依存関係がただしければ、依存するものも
@@ -309,7 +309,7 @@ def do_rpmbuild(hTAG, log_file)
   ENV.delete('MALLOC_CHECK_')
   ENV.delete('MALLOC_PERTURB_')
   ENV.delete('G_SLICE')
-  
+
   if (File.exist? "DISPLAY.PLEASE") && !(ENV.has_key? "DISPLAY")
     ENV["DISPLAY"]=$DISPLAY
   end
@@ -341,6 +341,11 @@ def do_rpmbuild(hTAG, log_file)
     result = MOMO_FAILURE
   end
 
+  momo_debug_log("rpmerr result: #{result}")
+
+#FIXME!!
+# rpmerr maybe always retrun 0
+
   # 後始末
   unless $NOSWITCH_JAVA then
     ENV.delete('JAVA_HOME')
@@ -368,13 +373,14 @@ def do_rpmbuild(hTAG, log_file)
     end
   end
 
+  momo_debug_log("do_rpmbuild returns #{result}")
+  return result
+
 ensure
   Dir.chdir ".."
 
   momo_assert { MOMO_UNDEFINED != result }
-  momo_debug_log("do_rpmbuild returns #{result}")
 
-  return result
 end
 
 # rpmbuild 成功時の処理
@@ -880,17 +886,17 @@ def buildme(pkg, name_stack, blacklist)
 
     # ビルド用ディレクトリを作り，ソースコードをダウンロード or コピー
     log(log_file, "prepare sources")
-    prepare_builddirs(hTAG, log_file)    
-    prepare_sources(hTAG, log_file)    
+    prepare_builddirs(hTAG, log_file)
+    prepare_sources(hTAG, log_file)
     Dir.chdir "#{pkg}"
     prepare_outputdirs(hTAG, log_file)
     backup_nosources(hTAG, srpm_only, log_file)
     Dir.chdir '..'
-    
+
     # rpmbuild を実行
-    throw :exit_buildme, do_rpmbuild(hTAG, log_file)    
+    throw :exit_buildme, do_rpmbuild(hTAG, log_file)
   end
-  
+
 ensure
   if !$VERBOSEOUT then
     print_status(pkg)

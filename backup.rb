@@ -139,11 +139,11 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
     if installs != ""
 
       installs_lst = 'installs.lst'
-      open(installs_lst, 'w') { |f| 	 
-        installs.split(/\s+/).each { |i| 	 
-          f.puts(i) 	 
-        } 	 
-      } 	 
+      open(installs_lst, 'w') { |f|
+        installs.split(/\s+/).each { |i|
+          f.puts(i)
+        }
+      }
 
       if $FORCE_INSTALL && $INSTALL then
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/force-install.sh")
@@ -153,9 +153,21 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
       end
 
-      exec_command("sudo #{install_exe} #{installs_lst}", log_file)
+      rpminstall = nil
+      rpminstall = exec_command("sudo #{install_exe} #{installs_lst}", log_file)
+
+      if 0 == rpminstall then
+        result = MOMO_SUCCESS
+      else
+        result = MOMO_FAILURE
+      end
 
       File.delete(installs_lst)
+
+      momo_debug_log("rpminstall: #{result}")
+      if result != 0
+        throw :exit_buildme, MOMO_FAILURE
+      end
 
       until $SYSTEM_PROVIDES.empty?
         $SYSTEM_PROVIDES.pop
@@ -174,6 +186,8 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
       end
     end
   end
+
+  momo_debug_log("backup_rpms returns #{result}")
 
 rescue Exception => e
   momo_fatal_error("exception: #{e}")
