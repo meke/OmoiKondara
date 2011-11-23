@@ -301,8 +301,14 @@ def do_rpmbuild(hTAG, log_file)
 ## option -i -> install=true
 ## option -i --forceinstall -> install=true
 ## option --forceinstall -> install=false
+##
+## option --fullbuild -> install=true
 
   if $INSTALL && /^(kernel|usolame)/ !~ pkg then
+    install = true
+  end
+
+  if $FULL_BUILD && /^(kernel|usolame)/ !~ pkg then
     install = true
   end
 

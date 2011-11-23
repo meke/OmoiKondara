@@ -114,6 +114,7 @@ Usage: ../tools/OmoiKondara [options] [names]
       --numjobs num       set number of numjobs
       --ftpcmd "FTP_CMD"  set ftp command
       --forceinstall      force install after build (except kernel and usolame)
+      --fullbuild         full build packages and force install after build
       --url-alias "ALIAS" set an url alias
       --noworkdir         do not use WORKDIR
       --rmsrc             remove local cached NoSource/NoPatch
@@ -213,6 +214,7 @@ end
   $RMSRC = false
   $STORE = nil
   $NODEPS = false
+  $FULL_BUILD     = false
 
   GREEN           = "\e[1;32m"
   RED             = "\e[1;31m"
@@ -300,6 +302,7 @@ options = [
   ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
   ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
   ["--forceinstall",       GetoptLong::NO_ARGUMENT],
+  ["--fullbuild",          GetoptLong::NO_ARGUMENT],
   ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
   ["--noworkdir",          GetoptLong::NO_ARGUMENT],
   ["--rmsrc",              GetoptLong::NO_ARGUMENT],
@@ -387,6 +390,8 @@ begin
       $FTP_CMD = ov
     when "--forceinstall"
       $FORCE_INSTALL = true
+    when "--fullbuild"
+      $FULL_BUILD = true
     when "--url-alias"
       pair = ov.split(' ')
       $URL_ALIAS[Regexp.compile(pair[0])] = pair[1]

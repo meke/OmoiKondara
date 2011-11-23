@@ -147,8 +147,8 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
 
       if $FORCE_INSTALL && $INSTALL then
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/force-install.sh")
-#      elsif $FORCE_INSTALL
-#        install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
+      elsif $FULL_BUILD
+        install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/force-install.sh")
       elsif $INSTALL
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
       end
