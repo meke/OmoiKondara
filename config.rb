@@ -82,42 +82,42 @@ end
 def show_usage()
   print <<END_OF_USAGE
 Usage: ../tools/OmoiKondara [options] [names]
-  -a, --archdep           ignore noarch packages
   -A, --arch "ARCH"       specify architecture
+  -C, --noccache          no ccache
+  -D, --distcc            enable to use distcc
+  -F  --force-fetch       force fetch NoSource/NoPatch
+  -G, --debug             enable debug flag
+  -J, --noswitch-java     not auto switch java environment
+  -L, --alter             build Alter(alternative) package, too
+  -M, --mirrorfirst       download from mirror first
+  -N, --nostrict          proceed by old behavior
+  -O, --orphan            build Orphan package, too
+  -R, --ignore-remove     do not uninstall packege if REMOVE.* exists
+  -S, --scanpackages      execute mph-scanpackage
+  -a, --archdep           ignore noarch packages
   -c, --cvs               (ignored. remained for compatibility)
   -d, --depend "DEPENDS"  specify dependencies
   -f, --force             force build
-  -F  --force-fetch       force fetch NoSource/NoPatch
-  -o  --check-only        checksum compare(run "rpmbuild -bp")
   -g, --checkgroup        group check only
   -i, --install           install after build (except kernel and usolame)
   -m, --main              main package only
   -n, --nonfree           build Nonfree package, too
-  -N, --nostrict          proceed by old behavior
+  -o  --check-only        checksum compare(run "rpmbuild -bp")
   -r, --rpmopt "RPMOPTS"  specify option through to rpm
-  -R, --ignore-remove     do not uninstall packege if REMOVE.* exists
-  -J, --noswitch-java     not auto switch java environment
   -s, --script            script mode
-  -S, --scanpackages      execute mph-scanpackage
   -v, --verbose           verbose mode
-  -G, --debug             enable debug flag
-  -C, --noccache          no ccache
-  -1, --cachecc1          use cachecc1
-  -M, --mirrorfirst       download from mirror first
-  -D, --distcc            enable to use distcc
-  -O, --orphan            build Orphan package, too
-  -L, --alter             build Alter(alternative) package, too
   -z, --zoo               build Zoo package, too
+  -1, --cachecc1          use cachecc1
       --checksum "MODE"   checksum mode ("strict", "workaround", "maintainer")
-      --random            build packages in random order
-      --nodeps            ignore buildreqs
-      --numjobs num       set number of numjobs
-      --ftpcmd "FTP_CMD"  set ftp command
       --forceinstall      force install after build (except kernel and usolame)
+      --ftpcmd "FTP_CMD"  set ftp command
       --fullbuild         full build packages and force install after build
-      --url-alias "ALIAS" set an url alias
+      --nodeps            ignore buildreqs
       --noworkdir         do not use WORKDIR
+      --numjobs num       set number of numjobs
+      --random            build packages in random order
       --rmsrc             remove local cached NoSource/NoPatch
+      --url-alias "ALIAS" set an url alias
   -h  --help              show this message
 END_OF_USAGE
   exit
@@ -270,45 +270,44 @@ end
 ############ Main ############
 ENV['PATH'] = "../tools:#{ENV['PATH']}"
 options = [
-  ["-a", "--archdep",      GetoptLong::NO_ARGUMENT],
   ["-A", "--arch",         GetoptLong::REQUIRED_ARGUMENT],
+  ["-C", "--noccache",     GetoptLong::NO_ARGUMENT],
+  ["-D", "--distcc",       GetoptLong::NO_ARGUMENT],
+  ["-F", "--force-fetch",  GetoptLong::NO_ARGUMENT],
+  ["-G", "--debug",        GetoptLong::NO_ARGUMENT],
+  ["-J", "--noswitch-java",GetoptLong::NO_ARGUMENT],
+  ["-L", "--alter",        GetoptLong::NO_ARGUMENT],
+  ["-M", "--mirrorfirst",  GetoptLong::NO_ARGUMENT],
+  ["-N", "--nostrict",     GetoptLong::NO_ARGUMENT],
+  ["-O", "--orphan",       GetoptLong::NO_ARGUMENT],
+  ["-R", "--ignore-remove",GetoptLong::NO_ARGUMENT],
+  ["-S", "--scanpackages", GetoptLong::NO_ARGUMENT],
+  ["-a", "--archdep",      GetoptLong::NO_ARGUMENT],
   ["-c", "--cvs",          GetoptLong::NO_ARGUMENT],
   ["-d", "--depend",       GetoptLong::REQUIRED_ARGUMENT],
   ["-f", "--force",        GetoptLong::NO_ARGUMENT],
-  ["-F", "--force-fetch",  GetoptLong::NO_ARGUMENT],
-  ["-o", "--check-only",   GetoptLong::NO_ARGUMENT],
   ["-g", "--checkgroup",   GetoptLong::NO_ARGUMENT],
   ["-i", "--install",      GetoptLong::NO_ARGUMENT],
   ["-m", "--main",         GetoptLong::NO_ARGUMENT],
   ["-n", "--nonfree",      GetoptLong::NO_ARGUMENT],
-  ["-N", "--nostrict",     GetoptLong::NO_ARGUMENT],
+  ["-o", "--check-only",   GetoptLong::NO_ARGUMENT],
   ["-r", "--rpmopt",       GetoptLong::REQUIRED_ARGUMENT],
-  ["-R", "--ignore-remove",GetoptLong::NO_ARGUMENT],
-  ["-J", "--noswitch-java",GetoptLong::NO_ARGUMENT],
   ["-s", "--script",       GetoptLong::NO_ARGUMENT],
-  ["-S", "--scanpackages", GetoptLong::NO_ARGUMENT],
   ["-v", "--verbose",      GetoptLong::NO_ARGUMENT],
-  ["-G", "--debug",        GetoptLong::NO_ARGUMENT],
-  ["-C", "--noccache",     GetoptLong::NO_ARGUMENT],
-  ["-1", "--cachecc1",     GetoptLong::NO_ARGUMENT],
-  ["-M", "--mirrorfirst",  GetoptLong::NO_ARGUMENT],
-  ["-D", "--distcc",       GetoptLong::NO_ARGUMENT],
-  ["-O", "--orphan",       GetoptLong::NO_ARGUMENT],
-  ["-L", "--alter",        GetoptLong::NO_ARGUMENT],
   ["-z", "--zoo",          GetoptLong::NO_ARGUMENT],
+  ["-1", "--cachecc1",     GetoptLong::NO_ARGUMENT],
   ["--checksum",           GetoptLong::REQUIRED_ARGUMENT],
-  ["--random",             GetoptLong::NO_ARGUMENT],
-  ["--nodeps",             GetoptLong::NO_ARGUMENT],
-  ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
-  ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
   ["--forceinstall",       GetoptLong::NO_ARGUMENT],
+  ["--ftpcmd",             GetoptLong::REQUIRED_ARGUMENT],
   ["--fullbuild",          GetoptLong::NO_ARGUMENT],
-  ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
+  ["--nodeps",             GetoptLong::NO_ARGUMENT],
   ["--noworkdir",          GetoptLong::NO_ARGUMENT],
+  ["--numjobs",            GetoptLong::REQUIRED_ARGUMENT],
+  ["--random",             GetoptLong::NO_ARGUMENT],
   ["--rmsrc",              GetoptLong::NO_ARGUMENT],
+  ["--url-alias",          GetoptLong::REQUIRED_ARGUMENT],
   ["-h", "--help",         GetoptLong::NO_ARGUMENT]
 ]
-
 
 parse_conf
 
