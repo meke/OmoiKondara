@@ -149,9 +149,11 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/force-install.sh")
       elsif $FULL_BUILD
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/force-install.sh")
-      elsif $INSTALL
+      else
         install_exe = File.expand_path("#{$PKGDIR}/../tools/v2/install.sh")
       end
+
+      momo_debug_log("install_exe: #{install_exe}")
 
       rpminstall = nil
       rpminstall = exec_command("sudo #{install_exe} #{installs_lst}", log_file)
