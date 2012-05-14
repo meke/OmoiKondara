@@ -94,6 +94,7 @@ Usage: ../tools/OmoiKondara [options] [names]
   -O, --orphan            build Orphan package, too
   -R, --ignore-remove     do not uninstall packege if REMOVE.* exists
   -S, --scanpackages      execute mph-scanpackage
+  -Y, --scanyumrepos      execute update-yum
   -a, --archdep           ignore noarch packages
   -c, --cvs               (ignored. remained for compatibility)
   -d, --depend "DEPENDS"  specify dependencies
@@ -172,6 +173,7 @@ end
   $SCRIPT             = false
   $MIRROR_FIRST       = false
   $SCANPACKAGES       = false
+  $SCANYUMREPOS       = false
   $GLOBAL_NOCCACHE    = false
   $GLOBAL_CACHECC1    = false
   $CACHECC1_DISTCCDIR = "/nonexistent"
@@ -282,6 +284,7 @@ options = [
   ["-O", "--orphan",       GetoptLong::NO_ARGUMENT],
   ["-R", "--ignore-remove",GetoptLong::NO_ARGUMENT],
   ["-S", "--scanpackages", GetoptLong::NO_ARGUMENT],
+  ["-Y", "--scanyumrepos", GetoptLong::NO_ARGUMENT],
   ["-a", "--archdep",      GetoptLong::NO_ARGUMENT],
   ["-c", "--cvs",          GetoptLong::NO_ARGUMENT],
   ["-d", "--depend",       GetoptLong::REQUIRED_ARGUMENT],
@@ -352,6 +355,8 @@ begin
       $SCRIPT = true
     when "-S"
       $SCANPACKAGES = true
+    when "-Y"
+      $SCANYUMREPOS = true
     when "-v"
       $VERBOSEOUT = true
     when "-G"

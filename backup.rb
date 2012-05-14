@@ -134,6 +134,8 @@ def backup_rpms(hTAG, install, rpmopt, log_file)
         else
           exec_command("/usr/sbin/mph-scanpackages #{topdir}/#{$ARCHITECTURE} #{topdir}/noarch", log_file)
         end
+      elsif $SCANYUMREPOS && rpms.last == rpm then
+        exec_command("pushd #{$PKGDIR}; ../tools/update-yum; popd", log_file)
       end
     end
     if installs != ""
