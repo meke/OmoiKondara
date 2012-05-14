@@ -1,35 +1,74 @@
 #
 # Ruby/ProgressBar - a text progress bar library
 #
-# Copyright (C) 2001-2004 Satoru Takabayashi <satoru@namazu.org>
+# Copyright (C) 2001-2005 Satoru Takabayashi <satoru@namazu.org>
 #     All rights reserved.
 #     This is free software with ABSOLUTELY NO WARRANTY.
 #
 # You can redistribute it and/or modify it under the terms
-# of Ruby's licence.
+# of Ruby's license.
 #
 
 class ProgressBar
-  VERSION = "0.8"
+  VERSION = "0.11.0"
 
   def initialize (title, total, out = STDERR)
     @title = title
     @total = total
     @out = out
-    @bar_width = 80
+    @terminal_width = 80
     @bar_mark = "o"
     @current = 0
     @previous = 0
-    @is_finished = false
+    @finished_p = false
     @start_time = Time.now
     @previous_time = @start_time
     @title_width = 14
     @format = "%-#{@title_width}s %3d%% %s %s"
     @format_arguments = [:title, :percentage, :bar, :stat]
+    clear
     show
   end
 
-  private
+  attr_reader   :title
+  attr_reader   :current
+  attr_reader   :total
+  attr_accessor :start_time
+  attr_writer   :bar_mark
+
+private
+
+  def fmt_bar
+    bar_width = do_percentage * @terminal_width / 100
+    sprintf("|%s%s|",
+            @bar_mark * bar_width,
+            " " *  (@terminal_width - bar_width))
+  end
+
+  def fmt_percentage
+    do_percentage
+  end
+
+  def fmt_stat
+    if @finished_p then elapsed else eta end
+  end
+
+  def fmt_stat_for_long_run
+    if @finished_p then elapsed else eta_running_average end
+  end
+
+  def fmt_stat_for_file_transfer
+    if @finished_p then
+      sprintf("%s %s %s", bytes, transfer_rate, elapsed)
+    else
+      sprintf("%s %s %s", bytes, transfer_rate, eta)
+    end
+  end
+
+  def fmt_title
+    @title[0,(@title_width - 1)] + ":"
+  end
+
   def convert_bytes (bytes)
     if bytes < 1024
       sprintf("%6dB", bytes)
@@ -56,7 +95,7 @@ class ProgressBar
     sec = t % 60
     min  = (t / 60) % 60
     hour = t / 3600
-    sprintf("%02d:%02d:%02d", hour, min, sec);
+    sprintf("% 3d:%02d:%02d", hour, min, sec);
   end
 
   # ETA stands for Estimated Time of Arrival.
@@ -66,7 +105,35 @@ class ProgressBar
     else
       elapsed = Time.now - @start_time
       eta = elapsed * @total / @current - elapsed;
-      sprintf("ETA:  %s", format_time(eta))
+      sprintf("ETA: %s", format_time(eta))
+    end
+  end
+
+  # Compute ETA with running average (better suited to long running tasks)
+  def eta_running_average
+    now = Time.now
+
+    # update throughput running average
+    if @total > 0 && @eta_previous && @eta_previous_time
+      current_elapsed = @current - @eta_previous
+      alpha = 0.9 ** current_elapsed
+      current_progress = 1.0 * current_elapsed
+      current_throughput = current_progress / (now - @eta_previous_time)
+      if @eta_throughput
+        @eta_throughput = @eta_throughput * alpha + current_throughput * (1-alpha)
+      else
+        @eta_throughput = current_throughput
+      end
+    end
+
+    @eta_previous = @current
+    @eta_previous_time = now
+
+    if @eta_throughput && @eta_throughput > 0
+      eta = (@total - @current) / @eta_throughput;
+      sprintf("ETA: %s", format_time(eta))
+    else
+      "ETA:  --:--:--"
     end
   end
 
@@ -74,29 +141,12 @@ class ProgressBar
     elapsed = Time.now - @start_time
     sprintf("Time: %s", format_time(elapsed))
   end
-  
-  def stat
-    if @is_finished then elapsed else eta end
-  end
-
-  def stat_for_file_transfer
-    if @is_finished then 
-      sprintf("%s %s %s", bytes, transfer_rate, elapsed)
-    else 
-      sprintf("%s %s %s", bytes, transfer_rate, eta)
-    end
-  end
 
   def eol
-    if @is_finished then "\n" else "\r" end
+    if @finished_p then "\n" else "\r" end
   end
 
-  def bar
-    len = percentage * @bar_width / 100
-    sprintf("|%s%s|", @bar_mark * len, " " *  (@bar_width - len))
-  end
-
-  def percentage
+  def do_percentage
     if @total.zero?
       100
     else
@@ -104,45 +154,47 @@ class ProgressBar
     end
   end
 
-  def title
-    @title[0,(@title_width - 1)] + ":"
+  DEFAULT_WIDTH = 80
+  def get_term_width
+    if ENV['COLUMNS'] =~ /^\d+$/
+      ENV['COLUMNS'].to_i
+    elsif (RUBY_PLATFORM =~ /java/ || (!STDIN.tty? && ENV['TERM'])) && shell_command_exists?('tput')
+      `tput cols`.to_i
+    elsif STDIN.tty? && shell_command_exists?('stty')
+      `stty size`.scan(/\d+/).map { |s| s.to_i }[1]
+    else
+      DEFAULT_WIDTH
+    end
+  rescue
+    DEFAULT_WIDTH
   end
 
-  def get_width
-    # FIXME: I don't know how portable it is.
-    default_width = 80
-    begin
-      tiocgwinsz = 0x5413
-      data = [0, 0, 0, 0].pack("SSSS")
-      if @out.ioctl(tiocgwinsz, data) >= 0 then
-        rows, cols, xpixels, ypixels = data.unpack("SSSS")
-        if cols >= 0 then cols else default_width end
-      else
-        default_width
-      end
-    rescue Exception
-      default_width
-    end
+  def shell_command_exists?(command)
+    ENV['PATH'].split(File::PATH_SEPARATOR).any?{|d| File.exists? File.join(d, command) }
   end
 
   def show
-    arguments = @format_arguments.map {|method| send(method) }
+    arguments = @format_arguments.map {|method|
+      method = sprintf("fmt_%s", method)
+      send(method)
+    }
     line = sprintf(@format, *arguments)
 
-    width = get_width
-    if line.length == width - 1 
+    width = get_term_width
+    if line.length == width - 1
       @out.print(line + eol)
+      @out.flush
     elsif line.length >= width
-      @bar_width = [@bar_width - (line.length - width + 1), 0].max
-      if @bar_width == 0 then @out.print(line + eol) else show end
+      @terminal_width = [@terminal_width - (line.length - width + 1), 0].max
+      if @terminal_width == 0 then @out.print(line + eol) else show end
     else # line.length < width - 1
-      @bar_width += width - line.length + 1
+      @terminal_width += width - line.length + 1
       show
     end
     @previous_time = Time.now
   end
 
-  def show_progress
+  def show_if_needed
     if @total.zero?
       cur_percentage = 100
       prev_percentage = 0
@@ -151,16 +203,37 @@ class ProgressBar
       prev_percentage = (@previous * 100 / @total).to_i
     end
 
-    if cur_percentage > prev_percentage || 
-        Time.now - @previous_time >= 1 ||
-        @is_finished
+    # Use "!=" instead of ">" to support negative changes
+    if cur_percentage != prev_percentage ||
+        Time.now - @previous_time >= 1 || @finished_p
       show
     end
   end
 
-  public
+public
+
+  def clear
+    @out.print "\r"
+    @out.print(" " * (get_term_width - 1))
+    @out.print "\r"
+  end
+
+  def finish
+    @current = @total
+    @finished_p = true
+    show
+  end
+
+  def finished?
+    @finished_p
+  end
+
   def file_transfer_mode
-    @format_arguments = [:title, :percentage, :bar, :stat_for_file_transfer]  
+    @format_arguments = [:title, :percentage, :bar, :stat_for_file_transfer]
+  end
+
+  def long_running
+    @format_arguments = [:title, :percentage, :bar, :stat_for_long_run]
   end
 
   def format= (format)
@@ -171,15 +244,16 @@ class ProgressBar
     @format_arguments = arguments
   end
 
-  def finish
-    @current = @total
-    @is_finished = true
-    show_progress
+  def halt
+    @finished_p = true
+    show
   end
 
-  def halt
-    @is_finished = true
-    show_progress
+  def inc (step = 1)
+    @current += step
+    @current = @total if @current > @total
+    show_if_needed
+    @previous = @current
   end
 
   def set (count)
@@ -187,19 +261,18 @@ class ProgressBar
       raise "invalid count: #{count} (total: #{@total})"
     end
     @current = count
-    show_progress
-    @previous = @current
-  end
-
-  def inc (step = 1)
-    @current += step
-    @current = @total if @current > @total
-    show_progress
+    show_if_needed
     @previous = @current
   end
 
   def inspect
-    "(ProgressBar: #{@current}/#{@total})"
+    "#<ProgressBar:#{@current}/#{@total}>"
   end
+
 end
 
+class ReversedProgressBar < ProgressBar
+  def do_percentage
+    100 - super
+  end
+end
